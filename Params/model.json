@@ -1,0 +1,11 @@
+
+{
+  "max_dist_proj": 0.1,
+  "desired_ee_velocity" : 0.08,
+  "s_trust_region" : 0.1,
+  "deaccelerate_ratio" : 0.90,
+
+  "tol_sing": 0.018,
+  "tol_selcol": 1.0,
+  "tol_envcol": 1.0
+}

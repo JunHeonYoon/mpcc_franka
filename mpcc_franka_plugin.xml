@@ -1,0 +1,7 @@
+<library path="lib/libmpcc_franka">
+  <class name="mpcc_franka/mpcc_controller" type="mpcc_franka::mpcc_controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      A controller
+    </description>
+  </class>
+</library>
