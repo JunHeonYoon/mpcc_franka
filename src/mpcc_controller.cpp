@@ -354,16 +354,104 @@ void mpcc_controller::asyncCalculationProc()
         {
           std::cout << "======================== Mode cahnge: Home position ========================" << std::endl;
         }
-        else if(control_mode_ == MPCC)
+        else if(control_mode_ == MPCC_PICK)
         {
-          std::cout << "======================== Mode cahnge: MPCC ========================" << std::endl;
+          std::cout << "======================== Mode cahnge: MPCC Pick ========================" << std::endl;
+          is_reached_ = false;
           s_info_.setZero();
           mpcc_qdot_desired_.setZero();
           mpcc_dVs_desired_ = 0.;
 
+          geometry_msgs::TransformStamped transformStamped;
+          if(getTransform("panda_link0", "object_frame", transformStamped))
+          {
+            Eigen::Vector3d waypoint_x, waypoint_y, waypoint_z;
+            std::vector<Eigen::Matrix3d> waypoint_r;
+            waypoint_x << x_init_(0), x_init_(0),                               transformStamped.transform.translation.x - 0.03;
+            waypoint_y << x_init_(1), transformStamped.transform.translation.y, transformStamped.transform.translation.y;
+            waypoint_z << x_init_(2), x_init_(2),                               transformStamped.transform.translation.z + 0.027;
+
+            waypoint_r.resize(waypoint_x.size());
+            waypoint_r[0] = rotation_init_;
+            waypoint_r[1] << 1.,  0.,  0., 
+                             0., -1.,  0.,
+                             0.,  0., -1.;
+            waypoint_r[2] << 1.,  0.,  0., 
+                             0., -1.,  0.,
+                             0.,  0., -1.;
+            std::cout << "set waypoint!" << std::endl;
+            mpcc::Track track = mpcc::Track(json_paths_.track_path);
+            track.setTrack(waypoint_x, waypoint_y, waypoint_z, waypoint_r);
+            mpcc::TrackPos track_xyzr = track.getTrack(transform_init_.matrix());
+            mpcc_->setTrack(track_xyzr.X,track_xyzr.Y,track_xyzr.Z,track_xyzr.R);
+            std::cout << "Set track!" << std::endl;
+            mpcc_thread_enabled_ = true;
+
+            spline_track_ = mpcc_->getTrack();
+            mpcc::PathData spline_path = spline_track_.getPathData();
+            nav_msgs::Path mpcc_ref_path;
+            mpcc_ref_path.header.frame_id = "panda_link0";
+            for(size_t i=0; i<spline_path.n_points; i++)
+            {
+              geometry_msgs::PoseStamped path_point;
+              path_point.pose.position.x = spline_path.X(i);
+              path_point.pose.position.y = spline_path.Y(i);
+              path_point.pose.position.z = spline_path.Z(i);
+              Rot2Quat(spline_path.R[i], path_point.pose);
+              path_point.header.frame_id = "panda_link0";
+
+              mpcc_ref_path.poses.push_back(path_point);
+
+              // logging data
+              mpcc_ref_path_info_file_ << path_point.pose.position.x << " "
+                                      << path_point.pose.position.y << " "
+                                      << path_point.pose.position.z << " "
+                                      << path_point.pose.orientation.x << " "
+                                      << path_point.pose.orientation.y << " "
+                                      << path_point.pose.orientation.z << " "
+                                      << path_point.pose.orientation.w << std::endl;
+            }
+            mpcc_ref_path_pub_.publish(mpcc_ref_path);
+          } 
+          else
+          {
+            ROS_INFO("Object can not be found!!");
+          }
+        }
+        else if(control_mode_ == MPCC_DROP)
+        {
+          std::cout << "======================== Mode cahnge: MPCC Drop ========================" << std::endl;
+          is_reached_ = false;
+          s_info_.setZero();
+          mpcc_qdot_desired_.setZero();
+          mpcc_dVs_desired_ = 0.;
+
+          Eigen::Vector4d waypoint_x, waypoint_y, waypoint_z;
+          std::vector<Eigen::Matrix3d> waypoint_r;
+          waypoint_x << 0., 0.0, -0.15, -0.15;
+          waypoint_y << 0., 0.0,  0.15,  0.17;
+          waypoint_z << 0., 0.1,  0.1,  0.18;
+
+          waypoint_r.resize(waypoint_x.size());
+          for(size_t i=0; i<waypoint_r.size(); i++)
+          {
+            if(i == waypoint_r.size()-1)
+            {
+              waypoint_r[i] << 1.0, 0.0,            0.0,
+                               0.0, cos(M_PI*4/3), -sin(M_PI*4/3),
+                               0.0, sin(M_PI*4/3),  cos(M_PI*4/3);
+            }
+            else
+            {
+              waypoint_r[i].setIdentity();
+            }
+          }
+          std::cout << "set waypoint!" << std::endl;
           mpcc::Track track = mpcc::Track(json_paths_.track_path);
-          mpcc::TrackPos track_xyzr = track.getTrack(x_init_);
+          track.setTrack(waypoint_x, waypoint_y, waypoint_z, waypoint_r);
+          mpcc::TrackPos track_xyzr = track.getTrack(transform_init_.matrix());
           mpcc_->setTrack(track_xyzr.X,track_xyzr.Y,track_xyzr.Z,track_xyzr.R);
+          std::cout << "Set track!" << std::endl;
           mpcc_thread_enabled_ = true;
 
           spline_track_ = mpcc_->getTrack();
@@ -383,12 +471,74 @@ void mpcc_controller::asyncCalculationProc()
 
             // logging data
             mpcc_ref_path_info_file_ << path_point.pose.position.x << " "
-                                     << path_point.pose.position.y << " "
-                                     << path_point.pose.position.z << " "
-                                     << path_point.pose.orientation.x << " "
-                                     << path_point.pose.orientation.y << " "
-                                     << path_point.pose.orientation.z << " "
-                                     << path_point.pose.orientation.w << std::endl;
+                                    << path_point.pose.position.y << " "
+                                    << path_point.pose.position.z << " "
+                                    << path_point.pose.orientation.x << " "
+                                    << path_point.pose.orientation.y << " "
+                                    << path_point.pose.orientation.z << " "
+                                    << path_point.pose.orientation.w << std::endl;
+          }
+          mpcc_ref_path_pub_.publish(mpcc_ref_path);
+        }
+        else if(control_mode_ == MPCC_PLACE)
+        {
+          std::cout << "======================== Mode cahnge: MPCC Place ========================" << std::endl;
+          is_reached_ = false;
+          s_info_.setZero();
+          mpcc_qdot_desired_.setZero();
+          mpcc_dVs_desired_ = 0.;
+
+          Eigen::Vector4d waypoint_x, waypoint_y, waypoint_z;
+          std::vector<Eigen::Matrix3d> waypoint_r;
+          waypoint_x << 0., 0.,  0.15,  0.15;
+          waypoint_y << 0., -0.02, -0.17, -0.17;
+          waypoint_z << 0., -0.08,  -0.08, -0.18;
+
+          waypoint_r.resize(waypoint_x.size());
+          for(size_t i=0; i<waypoint_r.size(); i++)
+          {
+            if(i == 0)
+            {
+              waypoint_r[i].setIdentity();
+            }
+            else
+            {
+              waypoint_r[i] << 1.0, 0.0,            0.0,
+                               0.0, cos(-M_PI*4/3), -sin(-M_PI*4/3),
+                               0.0, sin(-M_PI*4/3),  cos(-M_PI*4/3);
+            }
+          }
+          std::cout << "set waypoint!" << std::endl;
+          mpcc::Track track = mpcc::Track(json_paths_.track_path);
+          track.setTrack(waypoint_x, waypoint_y, waypoint_z, waypoint_r);
+          mpcc::TrackPos track_xyzr = track.getTrack(transform_init_.matrix());
+          mpcc_->setTrack(track_xyzr.X,track_xyzr.Y,track_xyzr.Z,track_xyzr.R);
+          std::cout << "Set track!" << std::endl;
+          mpcc_thread_enabled_ = true;
+
+          spline_track_ = mpcc_->getTrack();
+          mpcc::PathData spline_path = spline_track_.getPathData();
+          nav_msgs::Path mpcc_ref_path;
+          mpcc_ref_path.header.frame_id = "panda_link0";
+          for(size_t i=0; i<spline_path.n_points; i++)
+          {
+            geometry_msgs::PoseStamped path_point;
+            path_point.pose.position.x = spline_path.X(i);
+            path_point.pose.position.y = spline_path.Y(i);
+            path_point.pose.position.z = spline_path.Z(i);
+            Rot2Quat(spline_path.R[i], path_point.pose);
+            path_point.header.frame_id = "panda_link0";
+
+            mpcc_ref_path.poses.push_back(path_point);
+
+            // logging data
+            mpcc_ref_path_info_file_ << path_point.pose.position.x << " "
+                                    << path_point.pose.position.y << " "
+                                    << path_point.pose.position.z << " "
+                                    << path_point.pose.orientation.x << " "
+                                    << path_point.pose.orientation.y << " "
+                                    << path_point.pose.orientation.z << " "
+                                    << path_point.pose.orientation.w << std::endl;
           }
           mpcc_ref_path_pub_.publish(mpcc_ref_path);
         }
@@ -397,16 +547,61 @@ void mpcc_controller::asyncCalculationProc()
       if(control_mode_ == HOME)
       {
         Eigen::Matrix<double, 7, 1> target_q;
-        target_q << 0, 0, 0, -M_PI/2, 0, M_PI/2, M_PI/4;
+        // target_q << 0, 0, 0, -M_PI/2, 0, M_PI/2, M_PI/4;
+        target_q << 0, -M_PI/4, 0, -3*M_PI/4, 0, M_PI/2, M_PI/4;
         mpcc_controller::moveJointPosition(target_q, 4.0);
       }
-      else if(control_mode_ == MPCC)
+      else if(control_mode_ == MPCC_PICK)
       {
         if(is_mpcc_solved_)
         {
           is_mpcc_solved_ = false;
           qdot_desired_ = mpcc_qdot_desired_;
           s_info_.dVs = mpcc_dVs_desired_;
+        }
+        if(is_reached_)
+        {
+          qdot_desired_.setZero();
+          gripper_ac_close_.waitForServer();  
+          franka_gripper::GraspGoal goal;
+          goal.speed = 0.1;
+          goal.force = 0.001;
+          goal.epsilon.inner = 0.06;
+          goal.epsilon.outer = 7.;
+          gripper_ac_close_.sendGoal(goal);
+        }
+        q_desired_ = q_ + qdot_desired_ / hz_;
+      }
+      else if(control_mode_ == MPCC_DROP)
+      {
+        if(is_mpcc_solved_)
+        {
+          is_mpcc_solved_ = false;
+          qdot_desired_ = mpcc_qdot_desired_;
+          s_info_.dVs = mpcc_dVs_desired_;
+        }
+        if(is_reached_)
+        {
+          qdot_desired_.setZero();
+        }
+        q_desired_ = q_ + qdot_desired_ / hz_;
+      }
+      else if(control_mode_ == MPCC_PLACE)
+      {
+        if(is_mpcc_solved_)
+        {
+          is_mpcc_solved_ = false;
+          qdot_desired_ = mpcc_qdot_desired_;
+          s_info_.dVs = mpcc_dVs_desired_;
+        }
+        if(is_reached_)
+        {
+          qdot_desired_.setZero();
+          gripper_ac_open_.waitForServer();  
+          franka_gripper::MoveGoal goal;
+          goal.speed = 0.1;
+          goal.width = 0.08;
+          gripper_ac_open_.sendGoal(goal);
         }
         q_desired_ = q_ + qdot_desired_ / hz_;
       }
@@ -438,9 +633,34 @@ void mpcc_controller::modeChangeReaderProc()
             case 'h':
               mpcc_controller::setMode(HOME);
               break;
-            case 'm':
-              mpcc_controller::setMode(MPCC);
+            case 'p':
+              mpcc_controller::setMode(MPCC_PICK);
               break;
+            case 'd':
+              mpcc_controller::setMode(MPCC_DROP);
+              break;
+            case 'l':
+              mpcc_controller::setMode(MPCC_PLACE);
+              break;
+            case 'o':
+              {
+                gripper_ac_open_.waitForServer();  
+                franka_gripper::MoveGoal goal;
+                goal.speed = 0.1;
+                goal.width = 0.08;
+                gripper_ac_open_.sendGoal(goal);
+              }
+            case 'c':
+            {
+              gripper_ac_close_.waitForServer();  
+              franka_gripper::GraspGoal goal;
+              goal.speed = 0.1;
+              goal.force = 0.001;
+              goal.epsilon.inner = 0.06;
+              goal.epsilon.outer = 7.;
+              gripper_ac_close_.sendGoal(goal);
+            }
+
             default:
               mpcc_controller::setMode(NONE);
               break;
@@ -472,7 +692,7 @@ void mpcc_controller::StatePubProc()
 
       // get environment minimum distance
       geometry_msgs::TransformStamped transformStamped;
-      if(getTransform("panda_link0", "object_frame", transformStamped))
+      if(getTransform("panda_link0", "obstacle_frame", transformStamped))
       {
         obs_posi_(0) = transformStamped.transform.translation.x;
         obs_posi_(1) = transformStamped.transform.translation.y;
@@ -488,7 +708,7 @@ void mpcc_controller::StatePubProc()
       }
 
       // get Contouring error
-      if(control_mode_ == MPCC)
+      if((control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
       {
         Eigen::Vector3d ref_posi = spline_track_.getPosition(s_info_.s);
         contour_error_ = (ref_posi - x_).norm()*100.;
@@ -513,7 +733,7 @@ void mpcc_controller::StatePubProc()
       mpcc_Ec_pub_.publish(contour_error);
 
       // logging data
-      if(control_mode_ == MPCC)
+      if((control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
       {
         joint_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << q_.transpose() << " " << qdot_.transpose() << std::endl;
         s_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << s_info_.s << " " << s_info_.vs << " " << s_info_.dVs << std::endl;
@@ -547,9 +767,9 @@ void mpcc_controller::asyncMPCCProc()
       mpcc::State x0 = mpcc::vectorToState(x0_vec);
       mpcc::Input u0 = mpcc::vectorToInput(u0_vec);
 
-      // Get the transform between "panda_link0" and "object_frame"
+      // Get the transform between "panda_link0" and "obstacle_frame"
       geometry_msgs::TransformStamped transformStamped;
-      if(getTransform("panda_link0", "object_frame", transformStamped))
+      if(getTransform("panda_link0", "obstacle_frame", transformStamped))
       {
         obs_posi_(0) = transformStamped.transform.translation.x;
         obs_posi_(1) = transformStamped.transform.translation.y;
@@ -559,6 +779,25 @@ void mpcc_controller::asyncMPCCProc()
       {
         obs_posi_ << 5., 5., 5.;
       }
+
+      mpcc_->updateS(x0);
+      {
+        std::lock_guard<std::mutex> lock(mpcc_output_mutex_);
+        s_info_.s = x0.s;
+        s_info_.vs = x0.vs;
+      }
+      if(mpcc_->checkIsEnd(x0))
+      {
+        std::lock_guard<std::mutex> lock(mpcc_output_mutex_);
+        std::cout << "MPCC reached its end path!!" << std::endl;
+        is_reached_ = true;
+        mpcc_thread_enabled_ = false;
+        qdot_desired_.setZero();
+        continue;
+      }
+      else
+      {
+
 
       mpcc::MPCReturn mpc_sol;
       bool mpc_status = mpcc_->runMPC_(mpc_sol, x0, u0, obs_posi_, obs_radi_);
@@ -573,8 +812,8 @@ void mpcc_controller::asyncMPCCProc()
       {
         {
           std::lock_guard<std::mutex> lock(mpcc_output_mutex_);
-          s_info_.s = x0.s;
-          s_info_.vs = x0.vs;
+          // s_info_.s = x0.s;
+          // s_info_.vs = x0.vs;
           mpcc_qdot_desired_ = mpcc::inputTodJointVector(mpc_sol.u0);
           mpcc_dVs_desired_ = mpc_sol.u0.dVs;
         }
@@ -633,6 +872,7 @@ void mpcc_controller::asyncMPCCProc()
                                   << mpc_sol.compute_time.solve_qp << " "
                                   << mpc_sol.compute_time.get_alpha << std::endl;
       }
+    }
     }
   }
 }
