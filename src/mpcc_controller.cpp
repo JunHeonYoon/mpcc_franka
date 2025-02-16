@@ -354,6 +354,45 @@ void mpcc_controller::asyncCalculationProc()
         {
           std::cout << "======================== Mode cahnge: Home position ========================" << std::endl;
         }
+        else if(control_mode_ == MPCC)
+        {
+          std::cout << "======================== Mode cahnge: MPCC ========================" << std::endl;
+          is_reached_ = false;
+          s_info_.setZero();
+          mpcc_qdot_desired_.setZero();
+          mpcc_dVs_desired_ = 0.;
+
+          mpcc::Track track = mpcc::Track(json_paths_.track_path);
+          mpcc::TrackPos track_xyzr = track.getTrack(transform_init_.matrix());
+          mpcc_->setTrack(track_xyzr.X,track_xyzr.Y,track_xyzr.Z,track_xyzr.R);
+          mpcc_thread_enabled_ = true;
+
+          spline_track_ = mpcc_->getTrack();
+          mpcc::PathData spline_path = spline_track_.getPathData();
+          nav_msgs::Path mpcc_ref_path;
+          mpcc_ref_path.header.frame_id = "panda_link0";
+          for(size_t i=0; i<spline_path.n_points; i++)
+          {
+            geometry_msgs::PoseStamped path_point;
+            path_point.pose.position.x = spline_path.X(i);
+            path_point.pose.position.y = spline_path.Y(i);
+            path_point.pose.position.z = spline_path.Z(i);
+            Rot2Quat(spline_path.R[i], path_point.pose);
+            path_point.header.frame_id = "panda_link0";
+
+            mpcc_ref_path.poses.push_back(path_point);
+
+            // logging data
+            mpcc_ref_path_info_file_ << path_point.pose.position.x << " "
+                                    << path_point.pose.position.y << " "
+                                    << path_point.pose.position.z << " "
+                                    << path_point.pose.orientation.x << " "
+                                    << path_point.pose.orientation.y << " "
+                                    << path_point.pose.orientation.z << " "
+                                    << path_point.pose.orientation.w << std::endl;
+          }
+          mpcc_ref_path_pub_.publish(mpcc_ref_path);
+        }
         else if(control_mode_ == MPCC_PICK)
         {
           std::cout << "======================== Mode cahnge: MPCC Pick ========================" << std::endl;
@@ -547,9 +586,23 @@ void mpcc_controller::asyncCalculationProc()
       if(control_mode_ == HOME)
       {
         Eigen::Matrix<double, 7, 1> target_q;
-        // target_q << 0, 0, 0, -M_PI/2, 0, M_PI/2, M_PI/4;
-        target_q << 0, -M_PI/4, 0, -3*M_PI/4, 0, M_PI/2, M_PI/4;
+        target_q << 0, 0, 0, -M_PI/2, 0, M_PI/2, M_PI/4;
+        // target_q << 0, -M_PI/4, 0, -3*M_PI/4, 0, M_PI/2, M_PI/4;
         mpcc_controller::moveJointPosition(target_q, 4.0);
+      }
+      else if(control_mode_ == MPCC)
+      {
+        if(is_mpcc_solved_)
+        {
+          is_mpcc_solved_ = false;
+          qdot_desired_ = mpcc_qdot_desired_;
+          s_info_.dVs = mpcc_dVs_desired_;
+        }
+        if(is_reached_)
+        {
+          qdot_desired_.setZero();
+        }
+        q_desired_ = q_ + qdot_desired_ / hz_;
       }
       else if(control_mode_ == MPCC_PICK)
       {
@@ -633,6 +686,9 @@ void mpcc_controller::modeChangeReaderProc()
             case 'h':
               mpcc_controller::setMode(HOME);
               break;
+            case 'm':
+              mpcc_controller::setMode(MPCC);
+              break;
             case 'p':
               mpcc_controller::setMode(MPCC_PICK);
               break;
@@ -708,7 +764,7 @@ void mpcc_controller::StatePubProc()
       }
 
       // get Contouring error
-      if((control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
+      if((control_mode_ == MPCC || control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
       {
         Eigen::Vector3d ref_posi = spline_track_.getPosition(s_info_.s);
         contour_error_ = (ref_posi - x_).norm()*100.;
@@ -733,7 +789,7 @@ void mpcc_controller::StatePubProc()
       mpcc_Ec_pub_.publish(contour_error);
 
       // logging data
-      if((control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
+      if((control_mode_ == MPCC || control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
       {
         joint_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << q_.transpose() << " " << qdot_.transpose() << std::endl;
         s_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << s_info_.s << " " << s_info_.vs << " " << s_info_.dVs << std::endl;

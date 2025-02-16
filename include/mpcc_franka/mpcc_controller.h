@@ -129,7 +129,7 @@ class mpcc_controller : public controller_interface::MultiInterfaceController<
   ros::Time control_start_time_;
   SuhanBenchmark bench_timer_;
 
-  enum CTRL_MODE{NONE, HOME, MPCC_PICK, MPCC_DROP, MPCC_PLACE};
+  enum CTRL_MODE{NONE, HOME, MPCC, MPCC_PICK, MPCC_DROP, MPCC_PLACE};
   CTRL_MODE control_mode_{NONE};
 	bool is_mode_changed_ {false};
 
