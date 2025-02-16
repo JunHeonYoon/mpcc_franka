@@ -56,10 +56,9 @@ void MPC::updateInitialGuess(const State &x0)
     for(int i=1;i<N;i++) initial_guess_[i-1] = initial_guess_[i];
 
     initial_guess_[0].xk = x0;
-    // initial_guess_[0].uk.setZero();
 
     initial_guess_[N-1].xk = initial_guess_[N-2].xk;
-    initial_guess_[N-1].uk = initial_guess_[N-2].uk; //.setZero();
+    initial_guess_[N-1].uk = initial_guess_[N-2].uk;
 
     initial_guess_[N].xk = integrator_.RK4(initial_guess_[N-1].xk,initial_guess_[N-1].uk,Ts_);
     initial_guess_[N].uk.setZero();
@@ -69,10 +68,9 @@ void MPC::updateInitialGuess(const State &x0)
 
 void MPC::unwrapInitialGuess()
 {
-    double L = track_.getLength();
-    for(int i=1;i<=N;i++)
+    for(int i=0;i<=N;i++)
     {
-        initial_guess_[i].xk.s = std::min(initial_guess_[i].xk.s,L);
+        initial_guess_[i].xk.s = std::max(0., std::min(initial_guess_[i].xk.s, 1.));
     }
 }
 
@@ -90,25 +88,49 @@ void MPC::generateNewInitialGuess(const State &x0)
 
 bool MPC::runMPC(MPCReturn &mpc_return, State &x0, Input &u0)
 {
-
     Eigen::Vector3d dummy_position;
     dummy_position << 3,3,3;
     double dummy_radius = 0.;
     return runMPC_(mpc_return, x0, u0, dummy_position, dummy_radius);
 }
 
+void MPC::updateS(State &x0)
+{
+    // correct s
+    Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
+    x0.s = track_.projectOnSpline(x0.s, ee_pose);
+
+    //correct vs
+    // Eigen::VectorXd ee_vel = robot_->getJacobian(stateToJointVector(x0)) * inputTodJointVector(u0);
+    // Eigen::Vector3d ds_posi_dir = track_.getDerivative(x0.s).normalized();
+    // Eigen::Vector3d ds_ori_dir = track_.getOrientationDerivative(x0.s).normalized();
+    // x0.vs = (ee_vel.head(3).dot(ds_posi_dir) + ee_vel.tail(3).dot(ds_ori_dir)) / track_.getLength();
+}
+
+bool MPC::checkIsEnd(const State &x0)
+{
+    Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
+    double resi_posi = (end_pose_.block(0,3,3,1) -  ee_pose.block(0,3,3,1)).norm();
+    double resi_ori =  (getInverseSkewVector(LogMatrix(end_pose_.block(0,0,3,3).transpose()*ee_pose.block(0,0,3,3)))).norm();
+    double resi_s = fabs(x0.s - 1.0);
+    if(resi_posi < 0.005 && resi_ori < 0.01 && resi_s < 0.01) return true;
+    else return false;
+}
+
 bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vector3d &obs_position, const double &obs_radius)
 {
     auto start_mpc = std::chrono::high_resolution_clock::now();
     double last_s = x0.s;
-    x0.s = track_.projectOnSpline(last_s, robot_->getEEPosition(stateToJointVector(x0)));
 
-    JointVector q = stateToJointVector(x0);
-    dJointVector qdot = inputTodJointVector(u0);
-    Eigen::MatrixXd Jv = robot_->getJacobianv(q);
-    Eigen::Vector3d ee_vel = Jv*qdot;
-    Eigen::Vector3d vs_dir = track_.getDerivative(x0.s);
-    x0.vs = ee_vel.dot(vs_dir);
+    // correct s
+    Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
+    // x0.s = track_.projectOnSpline(last_s, ee_pose);
+
+    //correct vs
+    // Eigen::VectorXd ee_vel = robot_->getJacobian(stateToJointVector(x0)) * inputTodJointVector(u0);
+    // Eigen::Vector3d ds_posi_dir = track_.getDerivative(x0.s).normalized();
+    // Eigen::Vector3d ds_ori_dir = track_.getOrientationDerivative(x0.s).normalized();
+    // x0.vs = (ee_vel.head(3).dot(ds_posi_dir) + ee_vel.tail(3).dot(ds_ori_dir)) / track_.getLength();
 
     if(fabs(last_s - x0.s) > param_.max_dist_proj) 
     {
@@ -129,8 +151,6 @@ bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vect
     ComputeTime time_nmpc;
 
     solver_interface_->solveOCP(initial_guess_, &sqp_status, &time_nmpc);
-
-
    
     if(sqp_status == SOLVED)
     {
@@ -189,6 +209,12 @@ void MPC::setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y,const Eige
     track_.gen6DSpline(X,Y,Z,R);
     solver_interface_->setTrack(track_);
     valid_initial_guess_ = false;
+
+    end_pose_.setZero();
+    end_pose_(0,3) = X.tail<1>().value();
+    end_pose_(1,3) = Y.tail<1>().value();
+    end_pose_(2,3) = Z.tail<1>().value();
+    end_pose_.block(0,0,3,3) = R.back();
 }
 
 double MPC::getTrackLength()

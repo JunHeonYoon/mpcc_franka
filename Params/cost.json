@@ -1,17 +1,16 @@
 {
   "qC" : 500.0,
-  "qCNmult": 5,
+  "qCNmult": 10,
   "qL" : 100.0,
-  "qVs" : 20.0,
+  "qVs" : 2.0,
 
-  "qOri": 50,
+  "qOri": 100,
 
-  "qSing": 1,
+  "qSing": 1.0,
 
   "rdq"  : 0.002,
   "rddq"  : 10,
   "rdVs" : 0.1,
-  "rVee" : 0,
 
   "qC_reduction_ratio"   : 1.0,
   "qL_increase_ratio"    : 1.0,
