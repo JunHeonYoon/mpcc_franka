@@ -127,6 +127,8 @@ public:
     /// @return (PathData) splined path data
     PathData getPathData(){return path_data_;}
 
+    Traj traj_;
+
 private:
     /// @brief set irregular path point data to make path data (PathData)
     /// @param X_in (Eigen::VectorXd) X position data
@@ -181,8 +183,6 @@ private:
 
     /// @brief compute total end-effector task trajectory considering desired end-effector velocity and sampling time
     void computeTrajectory(const double Ts);
-
-    Traj traj_;
 
     PathData path_data_;
     CubicSpline spline_x_;

@@ -83,12 +83,12 @@ bool MPC::runMPC(MPCReturn &mpc_return, State &x0, Input &u0, const int &time_id
     return runMPC_(mpc_return, x0, u0, time_idx, dummy_position, dummy_radius);
 }
 
-bool MPC::checkIsEnd(const State &x0)
+bool MPC::checkIsEnd(const State &x0, const int &time_idx)
 {
     Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
     double resi_posi = (end_pose_.block(0,3,3,1) -  ee_pose.block(0,3,3,1)).norm();
     double resi_ori =  (getInverseSkewVector(LogMatrix(end_pose_.block(0,0,3,3).transpose()*ee_pose.block(0,0,3,3)))).norm();
-    if(resi_posi < 0.005 && resi_ori < 0.01) return true;
+    if(resi_posi < 0.005 && resi_ori < 0.01 && time_idx >= track_.traj_.P.size()) return true;
     else return false;
 }
 

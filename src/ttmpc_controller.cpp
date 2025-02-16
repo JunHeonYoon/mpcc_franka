@@ -605,7 +605,7 @@ void ttmpc_controller::asyncCalculationProc()
           gripper_ac_close_.waitForServer();  
           franka_gripper::GraspGoal goal;
           goal.speed = 0.1;
-          goal.force = 0.001;
+          goal.force = 0.00001;
           goal.epsilon.inner = 0.06;
           goal.epsilon.outer = 7.;
           gripper_ac_close_.sendGoal(goal);
@@ -816,14 +816,14 @@ void ttmpc_controller::asyncTTMPCProc()
         obs_posi_ << 5., 5., 5.;
       }
 
-      if(ttmpc_->checkIsEnd(x0))
+      if(ttmpc_->checkIsEnd(x0, time_idx_ttmpc_))
       {
-        // std::lock_guard<std::mutex> lock(ttmpc_output_mutex_);
-        // std::cout << "TTMPC reached its end path!!" << std::endl;
-        // is_reached_ = true;
-        // ttmpc_thread_enabled_ = false;
-        // qdot_desired_.setZero();
-        // continue;
+        std::lock_guard<std::mutex> lock(ttmpc_output_mutex_);
+        std::cout << "TTMPC reached its end path!!" << std::endl;
+        is_reached_ = true;
+        ttmpc_thread_enabled_ = false;
+        qdot_desired_.setZero();
+        continue;
       }
       // else
       // {
