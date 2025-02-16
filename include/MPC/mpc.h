@@ -72,11 +72,9 @@ public:
     /// @param (MPCReturn) log for MPC; optimal control input, total horizon results, time to run MPC
     /// @param x0 (State) current state
     /// @param u0 (Input) current control input
-    // /// @param voxel (std::vector<float>) Voxel Occupancy grid map
     /// @param obs_position (Eigen::Vector3d) position of the external obstacle
     /// @param obs_radius (double) radius of the external obstacle
     /// @return (bool) whether mpc is solved or not
-    // bool runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const std::vector<float> &voxel);
     bool runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vector3d &obs_position, const double &obs_radius);
 
     /// @brief set track given X-Y-Z-R path data
@@ -96,12 +94,14 @@ public:
     /// @param param_value (ParamValue) parameter value
     void setParam(const ParamValue &param_value);
 
+    void updateS(State &x0);
 
+    bool checkIsEnd(const State &x0);
 
     std::unique_ptr<RobotModel> robot_;
 
 private:
-    /// @brief unwrapping for initial variables which have phi(yaw) and arc length(s) 
+    /// @brief unwrapping for initial variables which have path parameter (s) 
     void unwrapInitialGuess();
 
     /// @brief to be warmstart, update initial variables for MPC
@@ -125,6 +125,8 @@ private:
     std::unique_ptr<SolverInterface> solver_interface_;
     PathToJson path_;
     unsigned int num_valid_guess_failed_;
+
+    Eigen::Matrix4d end_pose_;
 };
 
 }
