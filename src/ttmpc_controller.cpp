@@ -774,7 +774,7 @@ void ttmpc_controller::StatePubProc()
       ttmpc_Ec_pub_.publish(contour_error);
 
       // logging data
-      if((control_mode_ == TTMPC_PICK || control_mode_ == TTMPC_PLACE || control_mode_ == TTMPC_DROP) && ttmpc_thread_enabled_)
+      if((control_mode_ == TTMPC || control_mode_ == TTMPC_PICK || control_mode_ == TTMPC_PLACE || control_mode_ == TTMPC_DROP) && ttmpc_thread_enabled_)
       {
         joint_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << q_.transpose() << " " << qdot_.transpose() << std::endl;
         ee_vel_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << x_dot_.transpose() << std::endl;
