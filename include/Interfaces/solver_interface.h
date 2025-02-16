@@ -14,15 +14,15 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_SOLVER_INTERFACE_H
-#define MPCC_SOLVER_INTERFACE_H
+#ifndef TTMPC_SOLVER_INTERFACE_H
+#define TTMPC_SOLVER_INTERFACE_H
 
 #include "config.h"
 #include "types.h"
 #include "Spline/arc_length_spline.h"
 #include <array>
 
-namespace mpcc{
+namespace ttmpc{
 struct OptVariables;
 struct ComputeTime;
 enum Status
@@ -45,13 +45,12 @@ class SolverInterface {
     public:
         virtual void setTrack(const ArcLengthSpline track) = 0;
         virtual void setParam(const ParamValue &param_value) = 0;
-        // virtual void setEnvData(const std::vector<float> &voxel) = 0;
         virtual void setEnvData(const Eigen::Vector3d &obs_position, const double &obs_radius) = 0;
-        virtual void setInitialGuess(const std::vector<OptVariables> &initial_guess) = 0;
+        virtual void setInitialGuess(const std::vector<OptVariables> &initial_guess, const int &time_idx) = 0;
         virtual void setCurrentInput(const Input &cutrent_input) = 0;
         virtual bool solveOCP(std::vector<OptVariables> &opt_sol, Status *status, ComputeTime *mpc_time) = 0;
         virtual ~SolverInterface(){std::cout << "Deleting Solver Interface" << std::endl;}
 };
 }
 
-#endif //MPCC_SOLVER_INTERFACE_H
+#endif //TTMPC_SOLVER_INTERFACE_H

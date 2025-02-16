@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(mpcc_franka)
+project(ttmpc_franka)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -74,10 +74,8 @@ include_directories(
 )
 
 
-
-
 add_library(${PROJECT_NAME}
-src/mpcc_controller.cpp
+src/ttmpc_controller.cpp
 src/types.cpp
 src/Model/robot_model.cpp
 src/Constraints/SelfCollision/SelfCollisionModel.cpp
@@ -99,12 +97,9 @@ include/config.h
 include/Model/robot_model.h
 )
 
-add_dependencies(mpcc_franka
+add_dependencies(ttmpc_franka
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
-  # ${PROJECT_NAME}_generate_messages_cpp
-  # ${PROJECT_NAME}_gencpp
-  # ${PROJECT_NAME}_gencfg
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC

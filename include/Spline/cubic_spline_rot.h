@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_CUBIC_SPLINE_ROT_H
-#define MPCC_CUBIC_SPLINE_ROT_H
+#ifndef TTMPC_CUBIC_SPLINE_ROT_H
+#define TTMPC_CUBIC_SPLINE_ROT_H
 
 #include "config.h"
 #include <map>
@@ -25,7 +25,7 @@
 // Kang, I. G., and F. C. Park.
 // "Cubic spline algorithms for orientation interpolation."
 
-namespace mpcc{
+namespace ttmpc{
 
 /// @brief spline parameter struct R = R_i*ExpMatrix(LogMatrix(R_i^T * R_i+1))[a + b dx + c dx^2 + d dx^3]), caution: x, R is not path, but function param
 /// @param a (Eigen::VectorXd) constant
@@ -128,4 +128,4 @@ private:
     SplineRotData spline_data_;
 };
 }
-#endif //MPCC_CUBIC_SPLINE_ROT_H
+#endif //TTMPC_CUBIC_SPLINE_ROT_H

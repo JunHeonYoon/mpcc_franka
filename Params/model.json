@@ -2,8 +2,6 @@
 {
   "max_dist_proj": 0.1,
   "desired_s_velocity" : 0.05,
-  "s_trust_region" : 0.001,
-  "deaccelerate_ratio" : 0.99,
 
   "tol_sing": 0.018,
   "tol_selcol": 1.0,

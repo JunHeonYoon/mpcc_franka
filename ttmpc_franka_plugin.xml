@@ -1,0 +1,7 @@
+<library path="lib/libttmpc_franka">
+  <class name="ttmpc_franka/ttmpc_controller" type="ttmpc_franka::ttmpc_controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      A controller
+    </description>
+  </class>
+</library>

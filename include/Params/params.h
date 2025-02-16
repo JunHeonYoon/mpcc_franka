@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_PARAMS_H
-#define MPCC_PARAMS_H
+#ifndef TTMPC_PARAMS_H
+#define TTMPC_PARAMS_H
 
 
 #include <vector>
@@ -24,7 +24,7 @@
 #include "config.h"
 #include "types.h"
 
-namespace mpcc{
+namespace ttmpc{
 //used namespace
 using json = nlohmann::json;
 
@@ -33,8 +33,6 @@ class Param{
 public:
     double max_dist_proj;
     double desired_s_velocity; // desired path parameter velocity
-    double s_trust_region;
-    double deacc_ratio; // starting ratio to deaccelerate movement of s(path parameter)
 
     double tol_sing;
     double tol_selcol;
@@ -48,14 +46,12 @@ public:
 
 class CostParam{
 public:
-    // Contouring cost
-    double q_c;        // weight for contouring error
-    double q_c_N_mult; // weight multiplication for terminal 
-    double q_l;        // weight for lag error
-    double q_vs;       // weight for velocity of path parameter
+    // Tracking cost
+    double q_e;        // weight for track position error
+    double q_e_N_mult; // weight multiplication for terminal 
 
     // Heading cost
-    double q_ori; // weight for heading cost
+    double q_ori; // weight for track heading cost
 
     // Singularity cost
     double q_sing; // weight for singularity cost
@@ -87,8 +83,6 @@ public:
     /// @param q5_l (double) lower bound of q5
     /// @param q6_l (double) lower bound of q6
     /// @param q7_l (double) lower bound of q7
-    /// @param s_l  (double) lower bound of s
-    /// @param vs_l (double) lower bound of vs
     struct LowerStateBounds{
         double q1_l;
         double q2_l;
@@ -97,8 +91,6 @@ public:
         double q5_l;
         double q6_l;
         double q7_l;
-        double s_l;
-        double vs_l;
     };
 
     /// @brief  Upper bound of state
@@ -110,7 +102,6 @@ public:
     /// @param q6_u (double) upper bound of q6
     /// @param q7_u (double) upper bound of q7
     /// @param s_u  (double) upper bound of s
-    /// @param vs_u (double) upper bound of vs
     struct UpperStateBounds{
         double q1_u;
         double q2_u;
@@ -120,7 +111,6 @@ public:
         double q6_u;
         double q7_u;
         double s_u;
-        double vs_u;
     };
 
     /// @brief  Lower bound of control input
@@ -131,7 +121,6 @@ public:
     /// @param dq5_l (double) lower bound of dq5
     /// @param dq6_l (double) lower bound of dq6
     /// @param dq7_l (double) lower bound of dq7
-    /// @param dVs_l  (double) lower bound of dVs
     struct LowerInputBounds{
         double dq1_l;
         double dq2_l;
@@ -140,7 +129,6 @@ public:
         double dq5_l;
         double dq6_l;
         double dq7_l;
-        double dVs_l;
     };
 
     /// @brief  Upper bound of control input
@@ -151,7 +139,6 @@ public:
     /// @param dq5_u (double) upper bound of dq5
     /// @param dq6_u (double) upper bound of dq6
     /// @param dq7_u (double) upper bound of dq7
-    /// @param dVs_u  (double) upper bound of dVs
     struct UpperInputBounds{
         double dq1_u;
         double dq2_u;
@@ -160,7 +147,6 @@ public:
         double dq5_u;
         double dq6_u;
         double dq7_u;
-        double dVs_u;
     };
 
     /// @brief  Lower bound of control input
@@ -245,4 +231,4 @@ class SQPParam{
         SQPParam(std::string file,std::map<std::string, double> sqp_param);
 };
 }
-#endif //MPCC_PARAMS_H
+#endif //TTMPC_PARAMS_H

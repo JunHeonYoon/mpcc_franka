@@ -14,14 +14,14 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_BOUNDS_H
-#define MPCC_BOUNDS_H
+#ifndef TTMPC_BOUNDS_H
+#define TTMPC_BOUNDS_H
 
 #include "config.h"
 #include "types.h"
 #include "Params/params.h"
 
-namespace mpcc{
+namespace ttmpc{
 class Bounds {
 public:
     Bounds();
@@ -30,14 +30,12 @@ public:
     /// @brief get lower bound for state
     /// @param x (State) current state
     /// @return (Eigen::VectorXd) lower bound for state
-    Bounds_x getBoundsLX(const State &x) const;
     Bounds_x getBoundsLX() const;
 
     /// @brief get upper bound for state
     /// @param x (State) current state
     /// @param track_length (double) track length
     /// @return (Eigen::VectorXd) upper bound for state
-    Bounds_x getBoundsUX(const State &x,const double &track_length) const;
     Bounds_x getBoundsUX() const;
 
     /// @brief get lower bound for control input
@@ -70,4 +68,4 @@ private:
     Param param_;
 };
 }
-#endif //MPCC_BOUNDS_H
+#endif //TTMPC_BOUNDS_H

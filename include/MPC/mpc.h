@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_MPC_H
-#define MPCC_MPC_H
+#ifndef TTMPC_MPC_H
+#define TTMPC_MPC_H
 
 #include "config.h"
 #include "types.h"
@@ -37,7 +37,7 @@
 #include <chrono>
 #include <vector>
 
-namespace mpcc{
+namespace ttmpc{
 /// @brief output of MPC
 /// @param u0 (Input) optimal control input
 /// @param mpc_horizon (std::vector<OptVariables>) total horizon results (state and control input)
@@ -65,17 +65,19 @@ public:
     /// @param (MPCReturn) log for MPC; optimal control input, total horizon results, time to run MPC
     /// @param x0 (State) current state
     /// @param u0 (Input) current control input
+    /// @param time_idx (int) current time index
     /// @return (bool) whether mpc is solved or not
-    bool runMPC(MPCReturn &mpc_return, State &x0, Input &u0);
+    bool runMPC(MPCReturn &mpc_return, State &x0, Input &u0, const int &time_idx);
 
     /// @brief run MPC by sqp given current state
     /// @param (MPCReturn) log for MPC; optimal control input, total horizon results, time to run MPC
     /// @param x0 (State) current state
     /// @param u0 (Input) current control input
+    /// @param time_idx (int) current time index
     /// @param obs_position (Eigen::Vector3d) position of the external obstacle
     /// @param obs_radius (double) radius of the external obstacle
     /// @return (bool) whether mpc is solved or not
-    bool runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vector3d &obs_position, const double &obs_radius);
+    bool runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const int &time_idx, const Eigen::Vector3d &obs_position, const double &obs_radius);
 
     /// @brief set track given X-Y-Z-R path data
     /// @param X (Eigen::VectorXd) X path data
@@ -94,16 +96,11 @@ public:
     /// @param param_value (ParamValue) parameter value
     void setParam(const ParamValue &param_value);
 
-    void updateS(State &x0);
-
     bool checkIsEnd(const State &x0);
 
     std::unique_ptr<RobotModel> robot_;
 
 private:
-    /// @brief unwrapping for initial variables which have path parameter (s) 
-    void unwrapInitialGuess();
-
     /// @brief to be warmstart, update initial variables for MPC
     /// @param x0 (State) solution of MPC before time step
     void updateInitialGuess(const State &x0);
@@ -115,6 +112,11 @@ private:
     /// @brief print parameter value
     /// @param param_value (ParamValue) parameter value
     void printParamValue(const ParamValue& param_value);
+
+    Eigen::VectorXd track_X_;
+    Eigen::VectorXd track_Y_;
+    Eigen::VectorXd track_Z_;
+    std::vector<Eigen::Matrix3d> track_R_;
 
     ArcLengthSpline track_;
     bool valid_initial_guess_;
@@ -131,4 +133,4 @@ private:
 
 }
 
-#endif //MPCC_MPC_H
+#endif //TTMPC_MPC_H

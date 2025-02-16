@@ -1,11 +1,11 @@
-#ifndef MPCC_ROBOT_DATA_H
-#define MPCC_ROBOT_DATA_H
+#ifndef TTMPC_ROBOT_DATA_H
+#define TTMPC_ROBOT_DATA_H
 
 #include "Model/robot_model.h"
 #include "Constraints/SelfCollision/SelfCollisionModel.h"
 #include "Constraints/EnvCollision/EnvCollisionModel.h"
 
-namespace mpcc
+namespace ttmpc
 {
 // Data containing kinematic of robot wrt given joint angle
 struct RobotData
@@ -93,4 +93,4 @@ struct RobotData
     }
 };
 }
-#endif // MPCC_ROBOT_DATA_H
+#endif // TTMPC_ROBOT_DATA_H

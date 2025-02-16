@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>mpcc_franka</name>
+  <name>ttmpc_franka</name>
   <version>0.0.1</version>
   <description>The franka_controllers package</description>
 
@@ -34,7 +34,7 @@
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <controller_interface plugin="${prefix}/mpcc_franka_plugin.xml"/>
+    <controller_interface plugin="${prefix}/ttmpc_franka_plugin.xml"/>
     <!-- Other tools can request additional information be placed here -->
 
   </export>

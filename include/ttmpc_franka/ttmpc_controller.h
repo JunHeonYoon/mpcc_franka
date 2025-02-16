@@ -1,5 +1,5 @@
-#ifndef MPCC_CONTROLLER_H
-#define MPCC_CONTROLLER_H
+#ifndef TTMPC_CONTROLLER_H
+#define TTMPC_CONTROLLER_H
 
 #pragma once
 #include <iomanip>
@@ -43,7 +43,7 @@
 #include <fcntl.h>
 #include <termios.h>
 
-// ================ MPCC ================
+// ================ TTMPC ================
 #include <nlohmann/json.hpp>
 #include "MPC/mpc.h"
 #include "Params/track.h"
@@ -58,13 +58,13 @@
 // ======================================
 
 
-namespace mpcc_franka 
+namespace ttmpc_franka 
 {
 
-class mpcc_controller : public controller_interface::MultiInterfaceController<
-								               franka_hw::FrankaModelInterface,
-                               hardware_interface::VelocityJointInterface,
-								               franka_hw::FrankaStateInterface> {
+class ttmpc_controller : public controller_interface::MultiInterfaceController<
+								                franka_hw::FrankaModelInterface,
+                                hardware_interface::VelocityJointInterface,
+								                franka_hw::FrankaStateInterface> {
                      
   bool init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& node_handle) override;
   void starting(const ros::Time& time) override;
@@ -129,7 +129,7 @@ class mpcc_controller : public controller_interface::MultiInterfaceController<
   ros::Time control_start_time_;
   SuhanBenchmark bench_timer_;
 
-  enum CTRL_MODE{NONE, HOME, MPCC_PICK, MPCC_DROP, MPCC_PLACE};
+  enum CTRL_MODE{NONE, HOME, TTMPC, TTMPC_PICK, TTMPC_DROP, TTMPC_PLACE};
   CTRL_MODE control_mode_{NONE};
 	bool is_mode_changed_ {false};
 
@@ -152,59 +152,50 @@ class mpcc_controller : public controller_interface::MultiInterfaceController<
   {"/franka_gripper/homing", true};
 
   ros::Publisher control_mode_pub_;
-  // ================ MPCC ================
-  struct PathParmeter
-  {
-    double s;
-    double vs;
-    double dVs;
-    void setZero(){s=0; vs=0; dVs=0;}
-  };
+  // ================ TTMPC ================
+  franka_hw::TriggerRate ttmpc_trigger_;  
+  std::thread async_ttmpc_thread_;
+  std::mutex ttmpc_input_mutex_, ttmpc_output_mutex_;
+  bool ttmpc_thread_enabled_{false};
 
-  franka_hw::TriggerRate mpcc_trigger_;  
-  std::thread async_mpcc_thread_;
-  std::mutex mpcc_input_mutex_, mpcc_output_mutex_;
-  bool mpcc_thread_enabled_{false};
+  std::unique_ptr<ttmpc::MPC> ttmpc_;
+  std::unique_ptr<ttmpc::SelCollNNmodel> selcolNN_;
+  std::unique_ptr<ttmpc::EnvCollNNmodel> envcolNN_;
 
-  std::unique_ptr<mpcc::MPC> mpcc_;
-  std::unique_ptr<mpcc::SelCollNNmodel> selcolNN_;
-  std::unique_ptr<mpcc::EnvCollNNmodel> envcolNN_;
-
-  mpcc::PathToJson json_paths_;
-  double Ts_mpcc_;
+  ttmpc::PathToJson json_paths_;
+  double Ts_ttmpc_;
+  unsigned int time_idx_ttmpc_{0};
 
   bool is_reached_{false};
 
-  bool is_mpcc_solved_{false};
+  bool is_ttmpc_solved_{false};
   Eigen::Vector3d obs_posi_;
   double obs_radi_ = sqrt(pow(0.16/2., 2) + pow(0.195/2., 2) + pow(0.195/2., 2))*100.;
-  PathParmeter s_info_;
-  Eigen::Matrix<double, 7, 1> mpcc_qdot_desired_;
-  double mpcc_dVs_desired_{0.};
-  mpcc::ArcLengthSpline spline_track_;
+  Eigen::Matrix<double, 7, 1> ttmpc_qdot_desired_;
+  ttmpc::ArcLengthSpline spline_track_;
   double pred_sel_min_dist_{0.};
   double pred_env_min_dist_{0.};
   double mani_;
   double contour_error_{0.};
 
-  ros::Publisher mpcc_ref_path_pub_;
-  ros::Publisher mpcc_opt_traj_pub_;
-  ros::Publisher mpcc_ee_pose_pub_;
-  ros::Publisher mpcc_ee_speed_pub_;
-  ros::Publisher mpcc_mani_pub_;
-  ros::Publisher mpcc_selcol_pub_;
-  ros::Publisher mpcc_envcol_pub_;
-  ros::Publisher mpcc_Ec_pub_;
+  ros::Publisher ttmpc_ref_path_pub_;
+  ros::Publisher ttmpc_opt_traj_pub_;
+  ros::Publisher ttmpc_ee_pose_pub_;
+  ros::Publisher ttmpc_ee_speed_pub_;
+  ros::Publisher ttmpc_mani_pub_;
+  ros::Publisher ttmpc_selcol_pub_;
+  ros::Publisher ttmpc_envcol_pub_;
+  ros::Publisher ttmpc_Ec_pub_;
 
   tf2_ros::Buffer tfBuffer_;
   std::shared_ptr<tf2_ros::TransformListener> tfListener_;
 
   std::ofstream joint_info_file_, s_info_file_, ee_vel_info_file_, 
                 min_dist_info_file_, mani_info_file_, contour_error_info_file_, 
-                mpcc_ref_path_info_file_, mpcc_opt_traj_info_file_, 
-                mpcc_comp_time_info_file_, obs_info_file_;
+                ttmpc_ref_path_info_file_, ttmpc_opt_traj_info_file_, 
+                ttmpc_comp_time_info_file_, obs_info_file_;
 
-  void asyncMPCCProc();
+  void asyncTTMPCProc();
   void Rot2Quat(const Eigen::Matrix<double, 3, 3> &rot, geometry_msgs::Pose &pose);
   // ======================================
 
@@ -221,7 +212,6 @@ class mpcc_controller : public controller_interface::MultiInterfaceController<
   void StatePubProc();
 
   Eigen::MatrixXd LowPassFilter(const Eigen::MatrixXd &input, const Eigen::MatrixXd &prev_res, const double &sampling_freq, const double &cutoff_freq);
-  // geometry_msgs::TransformStamped getTransform(const std::string& parent_frame, const std::string& child_frame);
   bool getTransform(const std::string& parent_frame, const std::string& child_frame, geometry_msgs::TransformStamped& transformStamped);
 };
 

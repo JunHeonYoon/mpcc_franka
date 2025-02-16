@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <launch>
-  <arg name="robot_ip" default="172.16.3.3" />
+  <arg name="robot_ip" default="172.16.2.2" />
   <arg name="load_gripper" default="true" />
   <arg name="mobile_base" default="true"/>
 
@@ -20,8 +20,8 @@
     <arg name="load_robot_description" value="false"/>
   </include>
 
-  <rosparam command="load" file="$(find mpcc_franka)/config/mpcc_franka.yaml" />
-  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="mpcc_controller"/>
-  <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find mpcc_franka)/config/rviz.rviz"/>
+  <rosparam command="load" file="$(find ttmpc_franka)/config/ttmpc_franka.yaml" />
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="ttmpc_controller"/>
+  <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find ttmpc_franka)/config/rviz.rviz"/>
 
 </launch>

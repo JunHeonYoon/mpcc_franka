@@ -16,7 +16,7 @@
 
 #include "MPC/mpc.h"
 
-namespace mpcc{
+namespace ttmpc{
 MPC::MPC()
 :Ts_(1.0)
 {
@@ -62,16 +62,6 @@ void MPC::updateInitialGuess(const State &x0)
 
     initial_guess_[N].xk = integrator_.RK4(initial_guess_[N-1].xk,initial_guess_[N-1].uk,Ts_);
     initial_guess_[N].uk.setZero();
-
-    unwrapInitialGuess();
-}
-
-void MPC::unwrapInitialGuess()
-{
-    for(int i=0;i<=N;i++)
-    {
-        initial_guess_[i].xk.s = std::max(0., std::min(initial_guess_[i].xk.s, 1.));
-    }
 }
 
 void MPC::generateNewInitialGuess(const State &x0)
@@ -82,29 +72,15 @@ void MPC::generateNewInitialGuess(const State &x0)
         initial_guess_[i].xk = x0;
         initial_guess_[i].uk.setZero();
     }
-    unwrapInitialGuess();
     valid_initial_guess_ = true;
 }
 
-bool MPC::runMPC(MPCReturn &mpc_return, State &x0, Input &u0)
+bool MPC::runMPC(MPCReturn &mpc_return, State &x0, Input &u0, const int &time_idx)
 {
     Eigen::Vector3d dummy_position;
     dummy_position << 3,3,3;
     double dummy_radius = 0.;
-    return runMPC_(mpc_return, x0, u0, dummy_position, dummy_radius);
-}
-
-void MPC::updateS(State &x0)
-{
-    // correct s
-    Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
-    x0.s = track_.projectOnSpline(x0.s, ee_pose);
-
-    //correct vs
-    // Eigen::VectorXd ee_vel = robot_->getJacobian(stateToJointVector(x0)) * inputTodJointVector(u0);
-    // Eigen::Vector3d ds_posi_dir = track_.getDerivative(x0.s).normalized();
-    // Eigen::Vector3d ds_ori_dir = track_.getOrientationDerivative(x0.s).normalized();
-    // x0.vs = (ee_vel.head(3).dot(ds_posi_dir) + ee_vel.tail(3).dot(ds_ori_dir)) / track_.getLength();
+    return runMPC_(mpc_return, x0, u0, time_idx, dummy_position, dummy_radius);
 }
 
 bool MPC::checkIsEnd(const State &x0)
@@ -112,37 +88,19 @@ bool MPC::checkIsEnd(const State &x0)
     Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
     double resi_posi = (end_pose_.block(0,3,3,1) -  ee_pose.block(0,3,3,1)).norm();
     double resi_ori =  (getInverseSkewVector(LogMatrix(end_pose_.block(0,0,3,3).transpose()*ee_pose.block(0,0,3,3)))).norm();
-    double resi_s = fabs(x0.s - 1.0);
-    if(resi_posi < 0.005 && resi_ori < 0.01 && resi_s < 0.01) return true;
+    if(resi_posi < 0.005 && resi_ori < 0.01) return true;
     else return false;
 }
 
-bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vector3d &obs_position, const double &obs_radius)
+bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const int &time_idx, const Eigen::Vector3d &obs_position, const double &obs_radius)
 {
     auto start_mpc = std::chrono::high_resolution_clock::now();
-    double last_s = x0.s;
-
-    // correct s
-    Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
-    // x0.s = track_.projectOnSpline(last_s, ee_pose);
-
-    //correct vs
-    // Eigen::VectorXd ee_vel = robot_->getJacobian(stateToJointVector(x0)) * inputTodJointVector(u0);
-    // Eigen::Vector3d ds_posi_dir = track_.getDerivative(x0.s).normalized();
-    // Eigen::Vector3d ds_ori_dir = track_.getOrientationDerivative(x0.s).normalized();
-    // x0.vs = (ee_vel.head(3).dot(ds_posi_dir) + ee_vel.tail(3).dot(ds_ori_dir)) / track_.getLength();
-
-    if(fabs(last_s - x0.s) > param_.max_dist_proj) 
-    {
-        valid_initial_guess_ = false;
-        num_valid_guess_failed_++;
-    }
 
     if(valid_initial_guess_) updateInitialGuess(x0);
     else generateNewInitialGuess(x0);
 
     solver_interface_->setCurrentInput(u0);
-    solver_interface_->setInitialGuess(initial_guess_);
+    solver_interface_->setInitialGuess(initial_guess_, time_idx);
     auto start_env = std::chrono::high_resolution_clock::now();
     solver_interface_->setEnvData(obs_position, obs_radius);
     auto end_env = std::chrono::high_resolution_clock::now();
@@ -200,13 +158,17 @@ bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vect
     auto end_mpc = std::chrono::high_resolution_clock::now();
     mpc_return.compute_time.total = std::chrono::duration_cast<std::chrono::duration<double>>(end_mpc - start_mpc).count();
     mpc_return.compute_time.set_env = std::chrono::duration_cast<std::chrono::duration<double>>(end_env - start_env).count();
-    if(sqp_status == SOLVED || (sqp_status == MAX_ITER_EXCEEDED && num_valid_guess_failed_ < 5)) return true;
+    if(sqp_status == SOLVED || (sqp_status == MAX_ITER_EXCEEDED && num_valid_guess_failed_ < 50)) return true;
     else return false;
 }
 
 void MPC::setTrack(const Eigen::VectorXd &X, const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R)
 {
-    track_.gen6DSpline(X,Y,Z,R);
+    track_X_ = X;
+    track_Y_ = Y;
+    track_Z_ = Z;
+    track_R_ = R;
+    track_.gen6DSpline(track_X_,track_Y_,track_Z_,track_R_,Ts_);
     solver_interface_->setTrack(track_);
     valid_initial_guess_ = false;
 
@@ -224,6 +186,11 @@ double MPC::getTrackLength()
 
 void MPC::setParam(const ParamValue &param_value)
 {
+    track_ = ArcLengthSpline(path_, param_value);
+    track_.gen6DSpline(track_X_,track_Y_,track_Z_,track_R_,Ts_);
+    solver_interface_->setTrack(track_);
+    valid_initial_guess_ = false;
+    
     param_ = Param(path_.param_path, param_value.param);
     solver_interface_->setParam(param_value);
     printParamValue(param_value);

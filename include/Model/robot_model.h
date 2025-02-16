@@ -1,5 +1,5 @@
-#ifndef MPCC_ROBOT_MODEL_H
-#define MPCC_ROBOT_MODEL_H
+#ifndef TTMPC_ROBOT_MODEL_H
+#define TTMPC_ROBOT_MODEL_H
 
 #include <rbdl/rbdl.h>
 #include "config.h"
@@ -12,7 +12,7 @@ using namespace std;
 // #define PANDA_NUM_LINKS 10 // with hand
 #define PANDA_NUM_LINKS 9 // with hand
 
-namespace mpcc
+namespace ttmpc
 {   
     class RobotModel
     {
@@ -192,4 +192,4 @@ namespace mpcc
     };
 }
 
-#endif
+#endif //TTMPC_ROBOT_MODEL_H

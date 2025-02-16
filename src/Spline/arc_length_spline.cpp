@@ -16,7 +16,7 @@
 
 #include "Spline/arc_length_spline.h"
 
-namespace mpcc{
+namespace ttmpc{
 ArcLengthSpline::ArcLengthSpline()
 { 
 }
@@ -217,6 +217,22 @@ double ArcLengthSpline::unwrapInput(double x) const
     return std::max(0., std::min(x,1.));
 }
 
+void ArcLengthSpline::computeTrajectory(const double Ts)
+{
+    double s = 0.;
+    traj_.P.clear();
+    traj_.R.clear();
+    while(s <= 1.)
+    {
+        Eigen::Vector3d position = getPosition(s); 
+        Eigen::Matrix3d orientation = getOrientation(s); 
+        traj_.P.push_back(position);
+        traj_.R.push_back(orientation);
+
+        s += param_.desired_s_velocity*Ts;
+    }
+}
+
 void ArcLengthSpline::fitSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R)
 {
     // successively fit spline -> re-sample path -> compute arc length
@@ -260,7 +276,7 @@ void ArcLengthSpline::fitSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &
     spline_r_.genSpline(path_data_.s,path_data_.R,true);
 }
 
-void ArcLengthSpline::gen6DSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R)
+void ArcLengthSpline::gen6DSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R,const double Ts)
 {
     // generate 6-D arc length parametrized spline given X-Y-Z-R data
 
@@ -270,6 +286,7 @@ void ArcLengthSpline::gen6DSpline(const Eigen::VectorXd &X,const Eigen::VectorXd
     // successively fit spline and re-sample
     // fitSpline(clean_path.X,clean_path.Y,clean_path.Z,clean_path.R);
     fitSpline(X,Y,Z,R);
+    computeTrajectory(Ts);
 }
 
 Eigen::Vector3d ArcLengthSpline::getPosition(const double s) const
@@ -288,6 +305,26 @@ Eigen::Matrix3d ArcLengthSpline::getOrientation(const double s) const
     s_path = spline_r_.getPoint(s);
 
     return s_path;
+}
+
+Traj ArcLengthSpline::getNTrajectroy(const int &time_idx)
+{
+    Traj ref_traj;
+    ref_traj.P.resize(N+1);
+    ref_traj.R.resize(N+1);
+
+    for(size_t i=0; i<=N; i++)
+    {
+        int traj_idx = (traj_.P.size() > i+time_idx) ? i+time_idx: traj_.P.size()-1;
+        ref_traj.P[i] = traj_.P[traj_idx];
+        ref_traj.R[i] = traj_.R[traj_idx];
+    }
+    return ref_traj;
+}
+
+Traj ArcLengthSpline::getTrajectroy()
+{
+    return traj_;
 }
 
 Eigen::Vector3d ArcLengthSpline::getDerivative(const double s) const

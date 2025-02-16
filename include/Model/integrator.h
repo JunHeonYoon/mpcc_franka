@@ -14,14 +14,14 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_INTEGRATOR_H
-#define MPCC_INTEGRATOR_H
+#ifndef TTMPC_INTEGRATOR_H
+#define TTMPC_INTEGRATOR_H
 
 #include "config.h"
 #include "model.h"
 #include "types.h"
 
-namespace mpcc{
+namespace ttmpc{
 class Integrator {
 public:
     Integrator();
@@ -55,4 +55,4 @@ private:
     Model model_;
 };
 }
-#endif //MPCC_INTEGRATOR_H
+#endif //TTMPC_INTEGRATOR_H

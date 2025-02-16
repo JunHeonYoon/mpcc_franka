@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_CONSTRATINS_TEST_H
-#define MPCC_CONSTRATINS_TEST_H
+#ifndef TTMPC_CONSTRATINS_TEST_H
+#define TTMPC_CONSTRATINS_TEST_H
 
 
 #include "Spline/arc_length_spline.h"
@@ -28,7 +28,7 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-void genRoundTrack(mpcc::ArcLengthSpline &track)
+void genRoundTrack(ttmpc::ArcLengthSpline &track)
 {
     int NT = 100;    //number of track points
     double TrackRadius = 0.2; // track radius
@@ -60,79 +60,79 @@ void genRoundTrack(mpcc::ArcLengthSpline &track)
 
 TEST(TestConstraints, TestSelfCollision)
 {
-    std::ifstream iConfig(mpcc::pkg_path + "Params/config.json");
+    std::ifstream iConfig(ttmpc::pkg_path + "Params/config.json");
     json jsonConfig;
     iConfig >> jsonConfig;
 
-    mpcc::PathToJson json_paths {mpcc::pkg_path + std::string(jsonConfig["model_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["cost_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["bounds_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["track_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["normalization_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["sqp_path"])};
-    mpcc::Bounds bound = mpcc::Bounds(mpcc::BoundsParam(json_paths.bounds_path),mpcc::Param(json_paths.param_path));
-    std::unique_ptr<mpcc::RobotModel> robot = std::make_unique<mpcc::RobotModel>();
-    std::unique_ptr<mpcc::SelCollNNmodel> selcolNN = std::make_unique<mpcc::SelCollNNmodel>();
-    mpcc::Constraints constraints = mpcc::Constraints(0.02,json_paths);
-    mpcc::ArcLengthSpline track = mpcc::ArcLengthSpline(json_paths);
-    mpcc::Model model = mpcc::Model(0.02, json_paths);
-    mpcc::Param param = mpcc::Param(json_paths.param_path);
+    ttmpc::PathToJson json_paths {ttmpc::pkg_path + std::string(jsonConfig["model_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["cost_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["bounds_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["track_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["normalization_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["sqp_path"])};
+    ttmpc::Bounds bound = ttmpc::Bounds(ttmpc::BoundsParam(json_paths.bounds_path),ttmpc::Param(json_paths.param_path));
+    std::unique_ptr<ttmpc::RobotModel> robot = std::make_unique<ttmpc::RobotModel>();
+    std::unique_ptr<ttmpc::SelCollNNmodel> selcolNN = std::make_unique<ttmpc::SelCollNNmodel>();
+    ttmpc::Constraints constraints = ttmpc::Constraints(0.02,json_paths);
+    ttmpc::ArcLengthSpline track = ttmpc::ArcLengthSpline(json_paths);
+    ttmpc::Model model = ttmpc::Model(0.02, json_paths);
+    ttmpc::Param param = ttmpc::Param(json_paths.param_path);
 
     Eigen::Vector2d sel_col_n_hidden;
     sel_col_n_hidden << 256, 64;
-    selcolNN->setNeuralNetwork(mpcc::PANDA_DOF, 1, sel_col_n_hidden, true);
+    selcolNN->setNeuralNetwork(ttmpc::PANDA_DOF, 1, sel_col_n_hidden, true);
     
     genRoundTrack(track);
 
-    mpcc::Bounds_x x_LB = bound.getBoundsLX();
-    mpcc::Bounds_x x_UB = bound.getBoundsUX();
-    mpcc::Bounds_x x_range = x_UB - x_LB;
-    mpcc::Bounds_u u_LB = bound.getBoundsLU();
-    mpcc::Bounds_u u_UB = bound.getBoundsUU();
-    mpcc::Bounds_u u_range = u_UB - u_LB;
+    ttmpc::Bounds_x x_LB = bound.getBoundsLX();
+    ttmpc::Bounds_x x_UB = bound.getBoundsUX();
+    ttmpc::Bounds_x x_range = x_UB - x_LB;
+    ttmpc::Bounds_u u_LB = bound.getBoundsLU();
+    ttmpc::Bounds_u u_UB = bound.getBoundsUU();
+    ttmpc::Bounds_u u_range = u_UB - u_LB;
 
-    mpcc::StateVector xk_vec,d_xk_vec,xk1_vec;
-    xk_vec = mpcc::StateVector::Random();
-    xk_vec = (xk_vec + mpcc::StateVector::Ones()) / 2;
+    ttmpc::StateVector xk_vec,d_xk_vec,xk1_vec;
+    xk_vec = ttmpc::StateVector::Random();
+    xk_vec = (xk_vec + ttmpc::StateVector::Ones()) / 2;
     xk_vec = (xk_vec.array() * x_range.array()).matrix() + x_LB; 
-    d_xk_vec = mpcc::StateVector::Constant(0.01);
+    d_xk_vec = ttmpc::StateVector::Constant(0.01);
     xk1_vec = xk_vec + d_xk_vec;
 
-    mpcc::InputVector uk_vec, d_uk_vec, uk1_vec;
-    uk_vec = mpcc::InputVector::Random();
-    uk_vec = (uk_vec + mpcc::InputVector::Ones()) / 2;
+    ttmpc::InputVector uk_vec, d_uk_vec, uk1_vec;
+    uk_vec = ttmpc::InputVector::Random();
+    uk_vec = (uk_vec + ttmpc::InputVector::Ones()) / 2;
     uk_vec = (uk_vec.array() * u_range.array()).matrix() + u_LB; 
-    d_uk_vec = mpcc::InputVector::Constant(0.01);
+    d_uk_vec = ttmpc::InputVector::Constant(0.01);
     uk1_vec = d_uk_vec + uk_vec;
 
-    mpcc::State xk = mpcc::vectorToState(xk_vec);
-    mpcc::State xk1 = mpcc::vectorToState(xk1_vec);
-    mpcc::Input uk = mpcc::vectorToInput(uk_vec);
-    mpcc::Input uk1 = mpcc::vectorToInput(uk1_vec);
+    ttmpc::State xk = ttmpc::vectorToState(xk_vec);
+    ttmpc::State xk1 = ttmpc::vectorToState(xk1_vec);
+    ttmpc::Input uk = ttmpc::vectorToInput(uk_vec);
+    ttmpc::Input uk1 = ttmpc::vectorToInput(uk1_vec);
 
-    mpcc::RobotData rbk, rbk1;
-    rbk.update(xk_vec.head(mpcc::PANDA_DOF),robot,selcolNN);
-    rbk1.update(xk1_vec.head(mpcc::PANDA_DOF),robot,selcolNN);
+    ttmpc::RobotData rbk, rbk1;
+    rbk.update(xk_vec.head(ttmpc::PANDA_DOF),robot,selcolNN);
+    rbk1.update(xk1_vec.head(ttmpc::PANDA_DOF),robot,selcolNN);
 
 
-    mpcc::ConstraintsInfo constr_info, constr_info1;
-    mpcc::ConstraintsJac jac_constr;
+    ttmpc::ConstraintsInfo constr_info, constr_info1;
+    ttmpc::ConstraintsJac jac_constr;
 
     constraints.getConstraints(xk,uk,rbk,1,&constr_info,&jac_constr);
     constraints.getConstraints(xk1,uk1,rbk1,1,&constr_info1,NULL);
 
     // real inequality constraint on xk1, uk1
-    double r_l1 = constr_info1.c_lvec(mpcc::si_index.con_selcol);
-    double r_x1 = constr_info1.c_vec(mpcc::si_index.con_selcol);
-    double r_u1 = constr_info1.c_uvec(mpcc::si_index.con_selcol);
+    double r_l1 = constr_info1.c_lvec(ttmpc::si_index.con_selcol);
+    double r_x1 = constr_info1.c_vec(ttmpc::si_index.con_selcol);
+    double r_u1 = constr_info1.c_uvec(ttmpc::si_index.con_selcol);
 
     // Linearization inequality constriant on xk, uk
-    double l_l1 = constr_info.c_lvec(mpcc::si_index.con_selcol);
-    double l_x1 = (jac_constr.c_x*d_xk_vec + jac_constr.c_u*d_uk_vec + constr_info.c_vec)(mpcc::si_index.con_selcol);
-    double l_u1 = constr_info.c_uvec(mpcc::si_index.con_selcol);
+    double l_l1 = constr_info.c_lvec(ttmpc::si_index.con_selcol);
+    double l_x1 = (jac_constr.c_x*d_xk_vec + jac_constr.c_u*d_uk_vec + constr_info.c_vec)(ttmpc::si_index.con_selcol);
+    double l_u1 = constr_info.c_uvec(ttmpc::si_index.con_selcol);
 
     std::cout<< "Self Collision inequality condition"<<std::endl;
-    std::cout<< "real on X0: " << constr_info.c_lvec(mpcc::si_index.con_selcol) << " < " << constr_info.c_vec(mpcc::si_index.con_selcol) << " < " << constr_info.c_uvec(mpcc::si_index.con_selcol) << std::endl;
+    std::cout<< "real on X0: " << constr_info.c_lvec(ttmpc::si_index.con_selcol) << " < " << constr_info.c_vec(ttmpc::si_index.con_selcol) << " < " << constr_info.c_uvec(ttmpc::si_index.con_selcol) << std::endl;
     std::cout<< "real on X1: " << r_l1 << " < " << r_x1 << " < " << r_u1 << std::endl;
     std::cout<< "lin  on X1: " << l_l1 << " < " << l_x1 << " < " <<  l_u1 << std::endl;
     std::cout << "Error[%]: " << fabs((l_x1 - r_x1) / r_x1)*100 << std::endl;
@@ -142,84 +142,84 @@ TEST(TestConstraints, TestSelfCollision)
 
 TEST(TestConstraints, TestSingularity)
 {
-    std::ifstream iConfig(mpcc::pkg_path +"Params/config.json");
+    std::ifstream iConfig(ttmpc::pkg_path +"Params/config.json");
     json jsonConfig;
     iConfig >> jsonConfig;
 
-    mpcc::PathToJson json_paths {mpcc::pkg_path + std::string(jsonConfig["model_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["cost_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["bounds_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["track_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["normalization_path"]),
-                                 mpcc::pkg_path + std::string(jsonConfig["sqp_path"])};
-    mpcc::Bounds bound = mpcc::Bounds(mpcc::BoundsParam(json_paths.bounds_path), mpcc::Param(json_paths.param_path));
-    std::unique_ptr<mpcc::RobotModel> robot = std::make_unique<mpcc::RobotModel>(); 
-    std::unique_ptr<mpcc::SelCollNNmodel> selcolNN = std::make_unique<mpcc::SelCollNNmodel>();
-    mpcc::Constraints constraints = mpcc::Constraints(0.02,json_paths);
-    mpcc::ArcLengthSpline track = mpcc::ArcLengthSpline(json_paths);
-    mpcc::Model model = mpcc::Model(0.02, json_paths);
-    mpcc::Param param = mpcc::Param(json_paths.param_path);
+    ttmpc::PathToJson json_paths {ttmpc::pkg_path + std::string(jsonConfig["model_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["cost_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["bounds_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["track_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["normalization_path"]),
+                                 ttmpc::pkg_path + std::string(jsonConfig["sqp_path"])};
+    ttmpc::Bounds bound = ttmpc::Bounds(ttmpc::BoundsParam(json_paths.bounds_path), ttmpc::Param(json_paths.param_path));
+    std::unique_ptr<ttmpc::RobotModel> robot = std::make_unique<ttmpc::RobotModel>(); 
+    std::unique_ptr<ttmpc::SelCollNNmodel> selcolNN = std::make_unique<ttmpc::SelCollNNmodel>();
+    ttmpc::Constraints constraints = ttmpc::Constraints(0.02,json_paths);
+    ttmpc::ArcLengthSpline track = ttmpc::ArcLengthSpline(json_paths);
+    ttmpc::Model model = ttmpc::Model(0.02, json_paths);
+    ttmpc::Param param = ttmpc::Param(json_paths.param_path);
 
     Eigen::Vector2d sel_col_n_hidden;
     sel_col_n_hidden << 256, 64;
-    selcolNN->setNeuralNetwork(mpcc::PANDA_DOF, 1, sel_col_n_hidden, true);
+    selcolNN->setNeuralNetwork(ttmpc::PANDA_DOF, 1, sel_col_n_hidden, true);
     
     genRoundTrack(track);
 
-    mpcc::Bounds_x x_LB = bound.getBoundsLX();
-    mpcc::Bounds_x x_UB = bound.getBoundsUX();
-    mpcc::Bounds_x x_range = x_UB - x_LB;
-    mpcc::Bounds_u u_LB = bound.getBoundsLU();
-    mpcc::Bounds_u u_UB = bound.getBoundsUU();
-    mpcc::Bounds_u u_range = u_UB - u_LB;
+    ttmpc::Bounds_x x_LB = bound.getBoundsLX();
+    ttmpc::Bounds_x x_UB = bound.getBoundsUX();
+    ttmpc::Bounds_x x_range = x_UB - x_LB;
+    ttmpc::Bounds_u u_LB = bound.getBoundsLU();
+    ttmpc::Bounds_u u_UB = bound.getBoundsUU();
+    ttmpc::Bounds_u u_range = u_UB - u_LB;
 
-    mpcc::StateVector xk_vec,d_xk_vec,xk1_vec;
-    xk_vec = mpcc::StateVector::Random();
-    xk_vec = (xk_vec + mpcc::StateVector::Ones()) / 2;
+    ttmpc::StateVector xk_vec,d_xk_vec,xk1_vec;
+    xk_vec = ttmpc::StateVector::Random();
+    xk_vec = (xk_vec + ttmpc::StateVector::Ones()) / 2;
     xk_vec = (xk_vec.array() * x_range.array()).matrix() + x_LB; 
-    d_xk_vec = mpcc::StateVector::Constant(0.01);
+    d_xk_vec = ttmpc::StateVector::Constant(0.01);
     xk1_vec = xk_vec + d_xk_vec;
 
-    mpcc::InputVector uk_vec, d_uk_vec, uk1_vec;
-    uk_vec = mpcc::InputVector::Random();
-    uk_vec = (uk_vec + mpcc::InputVector::Ones()) / 2;
+    ttmpc::InputVector uk_vec, d_uk_vec, uk1_vec;
+    uk_vec = ttmpc::InputVector::Random();
+    uk_vec = (uk_vec + ttmpc::InputVector::Ones()) / 2;
     uk_vec = (uk_vec.array() * u_range.array()).matrix() + u_LB; 
-    d_uk_vec = mpcc::InputVector::Constant(0.01);
+    d_uk_vec = ttmpc::InputVector::Constant(0.01);
     uk1_vec = d_uk_vec + uk_vec;
 
-    mpcc::State xk = mpcc::vectorToState(xk_vec);
-    mpcc::State xk1 = mpcc::vectorToState(xk1_vec);
-    mpcc::Input uk = mpcc::vectorToInput(uk_vec);
-    mpcc::Input uk1 = mpcc::vectorToInput(uk1_vec);
+    ttmpc::State xk = ttmpc::vectorToState(xk_vec);
+    ttmpc::State xk1 = ttmpc::vectorToState(xk1_vec);
+    ttmpc::Input uk = ttmpc::vectorToInput(uk_vec);
+    ttmpc::Input uk1 = ttmpc::vectorToInput(uk1_vec);
 
-    mpcc::RobotData rbk, rbk1;
-    rbk.update(xk_vec.head(mpcc::PANDA_DOF),robot,selcolNN);
-    rbk1.update(xk1_vec.head(mpcc::PANDA_DOF),robot,selcolNN);
+    ttmpc::RobotData rbk, rbk1;
+    rbk.update(xk_vec.head(ttmpc::PANDA_DOF),robot,selcolNN);
+    rbk1.update(xk1_vec.head(ttmpc::PANDA_DOF),robot,selcolNN);
 
     bool result = false;
 
-    mpcc::ConstraintsInfo constr_info, constr_info1;
-    mpcc::ConstraintsJac jac_constr;
+    ttmpc::ConstraintsInfo constr_info, constr_info1;
+    ttmpc::ConstraintsJac jac_constr;
 
     constraints.getConstraints(xk,uk,rbk,1,&constr_info,&jac_constr);
     constraints.getConstraints(xk1,uk1,rbk1,1,&constr_info1,NULL);
 
     // real inequality constraint on xk1, uk1
-    double r_l1 = constr_info1.c_lvec(mpcc::si_index.con_sing);
-    double r_x1 = constr_info1.c_vec(mpcc::si_index.con_sing);
-    double r_u1 = constr_info1.c_uvec(mpcc::si_index.con_sing);
+    double r_l1 = constr_info1.c_lvec(ttmpc::si_index.con_sing);
+    double r_x1 = constr_info1.c_vec(ttmpc::si_index.con_sing);
+    double r_u1 = constr_info1.c_uvec(ttmpc::si_index.con_sing);
 
     // Linearization inequality constriant on xk, uk
-    double l_l1 = constr_info.c_lvec(mpcc::si_index.con_sing);
-    double l_x1 = (jac_constr.c_x*d_xk_vec + jac_constr.c_u*d_uk_vec + constr_info.c_vec)(mpcc::si_index.con_sing);
-    double l_u1 = constr_info.c_uvec(mpcc::si_index.con_sing);
+    double l_l1 = constr_info.c_lvec(ttmpc::si_index.con_sing);
+    double l_x1 = (jac_constr.c_x*d_xk_vec + jac_constr.c_u*d_uk_vec + constr_info.c_vec)(ttmpc::si_index.con_sing);
+    double l_u1 = constr_info.c_uvec(ttmpc::si_index.con_sing);
 
     std::cout<< "Singularity inequality condition"<<std::endl;
-    std::cout<< "real on X0: " << constr_info.c_lvec(mpcc::si_index.con_sing) << " < " << constr_info.c_vec(mpcc::si_index.con_sing) << " < " << constr_info.c_uvec(mpcc::si_index.con_sing) << std::endl;
+    std::cout<< "real on X0: " << constr_info.c_lvec(ttmpc::si_index.con_sing) << " < " << constr_info.c_vec(ttmpc::si_index.con_sing) << " < " << constr_info.c_uvec(ttmpc::si_index.con_sing) << std::endl;
     std::cout<< "real on X1: " << r_l1 << " < " << r_x1 << " < " << r_u1 << std::endl;
     std::cout<< "lin  on X1: " << l_l1 << " < " << l_x1 << " < " << l_u1 << std::endl;
     std::cout << "Error[%]: " << fabs((l_x1 - r_x1) / r_x1)*100 << std::endl;
     
     EXPECT_TRUE(fabs((l_x1 - r_x1) / r_x1) < 0.05);
 }
-#endif //MPCC_CONSTRATINS_TEST_H
+#endif //TTMPC_CONSTRATINS_TEST_H

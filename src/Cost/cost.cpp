@@ -15,7 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "Cost/cost.h"
-namespace mpcc{
+namespace ttmpc{
 Cost::Cost() 
 {
     std::cout << "default constructor, not everything is initialized properly" << std::endl;
@@ -42,139 +42,44 @@ double CubicSpline(double x, double x_0, double x_f, double y_0, double y_f)
     return y_0 + (y_f - y_0) * (3 * x_temp2 - 2 * x_temp3);
 }
 
-TrackPoint Cost::getRefPoint(const ArcLengthSpline &track,const State &x)
-{
-    // compute all the geometry information of the track at a given arc length
-    const double s = x.s;
-
-    // X-Y-Z postion of the reference at s
-    const Eigen::Vector3d pos_ref = track.getPosition(s);
-    const double x_ref = pos_ref(0);
-    const double y_ref = pos_ref(1);
-    const double z_ref = pos_ref(2);
-    // reference path derivatives
-    const Eigen::Vector3d dpos_ref = track.getDerivative(s);
-    const double dx_ref = dpos_ref(0);
-    const double dy_ref = dpos_ref(1);
-    const double dz_ref = dpos_ref(2);
-    // second order derivatives
-    Eigen::Vector3d ddpos_ref = track.getSecondDerivative(s);
-    const double ddx_ref = ddpos_ref(0);
-    const double ddy_ref = ddpos_ref(1);
-    const double ddz_ref = ddpos_ref(1);
-
-    return {pos_ref, dpos_ref, ddpos_ref};
-}
-
-TrackOrienatation Cost::getRefOrientation(const ArcLengthSpline &track,const State &x)
-{
-    // compute all the geometry information of the track at a given arc length
-    const double s = x.s;
-
-    // orientation of the reference path
-    const Eigen::Matrix3d ori_ref = track.getOrientation(s);
-    const Eigen::Vector3d dori_ref = track.getOrientationDerivative(s);
-
-    return {ori_ref,dori_ref};
-}
-
-ErrorInfo Cost::getErrorInfo(const ArcLengthSpline &track,const State &x,const RobotData &rb)
-{
-    ErrorInfo error_info;
-    // compute error between reference and X-Y-Z position of the robot EE
-    const Eigen::Vector3d pos = rb.EE_position_;
-    const TrackPoint track_point = getRefPoint(track,x);
-    const Eigen::Vector3d total_error = pos - track_point.p_ref;
-    
-    // lag error
-    Eigen::Vector3d Tangent = track_point.dp_ref; // tangent vector for ref point
-    Eigen::Vector3d lag_error = (Tangent.dot(total_error)) * Tangent; // e_l = <T, e> * T
-
-    // contouring error
-    Eigen::Vector3d contouring_error = total_error - lag_error;
-
-    // jacobian of the total error with respect to state X
-    Eigen::Matrix<double,3,NX> d_total_error;
-    d_total_error.setZero();
-    d_total_error.block(0,si_index.q1,3,PANDA_DOF) = rb.Jv_;
-    d_total_error.block(0,si_index.s,3,1) = -Tangent;
-
-    // jacobian of the lag error with respect to state X
-    Eigen::Matrix<double,3,NX> d_Tangent;
-    d_Tangent.setZero();
-    d_Tangent.block(0,si_index.s,3,1) = track_point.ddp_ref; // normal vector for ref point
-    Eigen::Matrix<double,3,NX> d_lag_error;
-    d_lag_error.setZero();
-    d_lag_error = (Tangent*Tangent.transpose()) * d_total_error + (Tangent*total_error.transpose() + Tangent.transpose()*total_error*Eigen::Matrix3d::Identity()) * d_Tangent;
-    
-    // jacobian of the contouring error with respect to state X
-    Eigen::Matrix<double,3,NX> d_contouring_error;
-    d_contouring_error.setZero();
-    d_contouring_error = d_total_error - d_lag_error;
-
-    return {contouring_error,lag_error,d_contouring_error,d_lag_error};
-}
-
-void Cost::getContouringCost(const ArcLengthSpline &track,const State &x,const RobotData &rb,int k, 
+void Cost::getPositionCost(const Eigen::Vector3d &ref_posi,const State &x,const RobotData &rb,int k, 
                              double* obj,CostGrad* grad,CostHess* hess)
 {
-    // compute state cost, formed by contouring error cost + cost on progress of path parameter
-    // compute error and jacobian of error
-    const ErrorInfo error_info = getErrorInfo(track,x,rb);
-    // contouring cost matrix
-    Eigen::Vector2d ContouringCost;
-    ContouringCost.setZero(2);
-    ContouringCost(0) = k < N ? contouring_cost_ : cost_param_.q_c_N_mult * contouring_cost_; // for contouring error
-    ContouringCost(1) = lag_cost_; // for lag error
+    const double PositionCost = cost_param_.q_e * ((k == N) ? cost_param_.q_e_N_mult : 1.0);
 
-
-    // progress maximization part
-    double desired_ee_vel = (x.s < 1. * param_.deacc_ratio) ? param_.desired_s_velocity : -param_.desired_s_velocity / (1. * param_.deacc_ratio) * (x.s - 1.);
-
-    // Exact Contouring error cost
+    // Exact position error cost
     if(obj)
     {
-        (*obj) = ContouringCost(0) * error_info.contouring_error.squaredNorm() +
-                 ContouringCost(1) * error_info.lag_error.squaredNorm() +
-                 cost_param_.q_vs * pow(x.vs - desired_ee_vel,2);
+        (*obj) = PositionCost * (rb.EE_position_ - ref_posi).squaredNorm();
     }
 
-    // Gradient of Contouring error cost
+    // Gradient of position error cost
     if(grad)
     {
         grad->setZero();
-        grad->f_x = 2.0*ContouringCost(0)*error_info.d_contouring_error.transpose()*error_info.contouring_error +
-                    2.0*ContouringCost(1)*error_info.d_lag_error.transpose()*error_info.lag_error;
-        grad->f_x(si_index.vs) += 2.0 * cost_param_.q_vs * (x.vs - desired_ee_vel);
+        grad->f_x = 2.0 * PositionCost * rb.Jv_.transpose() * (rb.EE_position_ - ref_posi);
     }
 
-    // Hessian of Contouring error cost
+    // Hessian of position error cost
     if(hess)
     {
         hess->setZero();
-        hess->f_xx = 2.0*ContouringCost(0)*error_info.d_contouring_error.transpose()*error_info.d_contouring_error +
-                     2.0*ContouringCost(1)*error_info.d_lag_error.transpose()*error_info.d_lag_error;
-        hess->f_xx(si_index.vs,si_index.vs) += 2.0 * cost_param_.q_vs;
+        hess->f_xx = 2.0 * PositionCost * rb.Jv_.transpose() * rb.Jv_;
     }
     return;
 }
 
-void Cost::getHeadingCost(const ArcLengthSpline &track,const State &x,const RobotData &rb,
+void Cost::getHeadingCost(const Eigen::Matrix3d &ref_ori,const State &x,const RobotData &rb,
                           double* obj,CostGrad* grad,CostHess* hess)
 {
-     // compute heading orientation error cost
-    const TrackOrienatation ref_ori = getRefOrientation(track,x);
-    const Eigen::Matrix3d ref_R = ref_ori.R_ref;
-    const Eigen::Matrix3d cur_R = rb.EE_orientation_;
-
-    const Eigen::Matrix3d R_bar = ref_R.transpose() * cur_R;
-    const Eigen::Vector3d Log_R_bar = getInverseSkewVector(LogMatrix(R_bar));
-    Eigen::Matrix<double,3,NX> d_Log_R_bar = Eigen::MatrixXd::Zero(3,NX);
+    // compute heading orientation error cost
+    const Eigen::Matrix3d ori_ee = rb.EE_orientation_;
+    const Eigen::Vector3d Phi = getInverseSkewVector(LogMatrix(ref_ori.transpose() * ori_ee));
 
     // Exact Heading error cost
     if(obj)
     {
-        (*obj) = heading_cost_ * Log_R_bar.squaredNorm();
+        (*obj) = cost_param_.q_ori * Phi.squaredNorm();
     }
 
 
@@ -182,29 +87,30 @@ void Cost::getHeadingCost(const ArcLengthSpline &track,const State &x,const Robo
     {
         // Linearize heading error function by jacobian. 
         Eigen::Matrix3d J_r_inv;
-        if(Log_R_bar.norm() < 1e-8) J_r_inv = Eigen::Matrix3d::Identity();
-        else J_r_inv = Eigen::Matrix3d::Identity() + 1./2.*getSkewMatrix(Log_R_bar) + ( 1. / Log_R_bar.squaredNorm() + ( 1. + cos(Log_R_bar.norm()) ) / ( 2. * Log_R_bar.norm() * sin(Log_R_bar.norm()) ) )*getSkewMatrix(Log_R_bar)*getSkewMatrix(Log_R_bar);
-        d_Log_R_bar.block(0,si_index.q1,3,PANDA_DOF) = J_r_inv * cur_R.transpose() * rb.Jw_;
-        d_Log_R_bar.block(0,si_index.s,3,1) = -J_r_inv * cur_R.transpose() * ref_ori.dR_ref;
+        if(Phi.norm() < 1e-8) J_r_inv = Eigen::Matrix3d::Identity();
+        else J_r_inv = Eigen::Matrix3d::Identity() + 1./2.*getSkewMatrix(Phi) + ( 1. / Phi.squaredNorm() + ( 1. + cos(Phi.norm()) ) / ( 2. * Phi.norm() * sin(Phi.norm()) ) )*getSkewMatrix(Phi)*getSkewMatrix(Phi);
+
+        Eigen::MatrixXd d_Phi = J_r_inv * ori_ee.transpose() * rb.Jw_;
+
+        // Gradient of Heading error cost
+        if(grad)
+        {
+            grad->setZero();
+            grad->f_x = 2.0 * cost_param_.q_ori * d_Phi.transpose() * Phi;
+        }
+
+        // Hessian of Heading error cost
+        if(hess)
+        {
+            hess->setZero();
+            hess->f_xx = 2.0 * cost_param_.q_ori * d_Phi.transpose() * d_Phi;
+        }
     }
 
-    // Gradient of Heading error cost
-    if(grad)
-    {
-        grad->setZero();
-        grad->f_x = 2.0 * heading_cost_ * d_Log_R_bar.transpose() * Log_R_bar;
-    }
-
-    // Hessian of Heading error cost
-    if(hess)
-    {
-        hess->setZero();
-        hess->f_xx = 2.0 * heading_cost_ * d_Log_R_bar.transpose() * d_Log_R_bar;
-    }
     return;
 }
 
-void Cost::getInputCost(const ArcLengthSpline &track,const State &x,const Input &u,const RobotData &rb,int k,
+void Cost::getInputCost(const State &x,const Input &u,const RobotData &rb,int k,
                         double* obj,CostGrad* grad,CostHess* hess)
 {
     // compute control input cost, formed by joint velocity, joint acceleration, acceleration of path parameter 
@@ -214,9 +120,7 @@ void Cost::getInputCost(const ArcLengthSpline &track,const State &x,const Input 
     if(obj)
     {
         (*obj) = 0;
-        if(k != N) (*obj) = cost_param_.r_dq * dq.squaredNorm() +
-                            cost_param_.r_dVs * pow(u.dVs,2);
-    }
+        if(k != N) (*obj) = cost_param_.r_dq * dq.squaredNorm();    }
 
 
     // Gradient of Input cost
@@ -226,7 +130,6 @@ void Cost::getInputCost(const ArcLengthSpline &track,const State &x,const Input 
         if(k != N)
         {
             grad->f_u.segment(si_index.dq1,PANDA_DOF) = 2.0 * cost_param_.r_dq * dq;
-            grad->f_u(si_index.dVs) = 2.0 * cost_param_.r_dVs*u.dVs;
         }
     }
     
@@ -236,14 +139,13 @@ void Cost::getInputCost(const ArcLengthSpline &track,const State &x,const Input 
         if(k != N)
         {
             hess->f_uu.block(si_index.dq1,si_index.dq1,PANDA_DOF,PANDA_DOF) = 2.0 * cost_param_.r_dq * Eigen::MatrixXd::Identity(PANDA_DOF,PANDA_DOF);
-            hess->f_uu(si_index.dVs,si_index.dVs) = 2.0 * cost_param_.r_dVs;
         }
     }
 
     return;
 }
 
-void Cost::getSingularityCost(const ArcLengthSpline &track,const State &x,const RobotData &rb,
+void Cost::getSingularityCost(const State &x,const RobotData &rb,
                               double* obj,CostGrad* grad,CostHess* hess)
 {
     if(obj)
@@ -261,20 +163,18 @@ void Cost::getSingularityCost(const ArcLengthSpline &track,const State &x,const 
     }
 }
 
-void Cost::getCost(const ArcLengthSpline &track,const State &x,const Input &u,const RobotData &rb,int k,
+void Cost::getCost(const Eigen::Vector3d &ref_posi,const Eigen::Matrix3d &ref_ori,const State &x,const Input &u,const RobotData &rb,int k,
                    double* obj,CostGrad* grad,CostHess* hess)
 {
     double ratio = std::min(rb.sel_min_dist_ / (param_.tol_selcol*2.0), rb.manipul_ / (param_.tol_sing*2.0));
     if(ratio <= 1.0)
     {
-        contouring_cost_ = cost_param_.q_c * CubicSpline(ratio, 0.5, 1.0, cost_param_.q_c_red_ratio, 1.0);
-        lag_cost_ = cost_param_.q_l * CubicSpline(ratio, 0.5, 1.0, cost_param_.q_l_inc_ratio, 1.0);
+        contouring_cost_ = cost_param_.q_e * CubicSpline(ratio, 0.5, 1.0, cost_param_.q_c_red_ratio, 1.0);
         heading_cost_ = cost_param_.q_ori * CubicSpline(ratio, 0.5, 1.0, cost_param_.q_ori_red_ratio, 1.0);
     }
     else
     {
-        contouring_cost_ = cost_param_.q_c;
-        lag_cost_ = cost_param_.q_l;
+        contouring_cost_ = cost_param_.q_e;
         heading_cost_ = cost_param_.q_ori;
     }
     double obj_contouring, obj_heading, obj_input, obj_sing;
@@ -283,25 +183,25 @@ void Cost::getCost(const ArcLengthSpline &track,const State &x,const Input &u,co
 
     if(obj && !grad && !hess)
     {
-        getContouringCost(track, x, rb, k, &obj_contouring, NULL, NULL);
-        getHeadingCost(track, x, rb, &obj_heading, NULL, NULL);
-        getInputCost(track, x, u, rb, k, &obj_input, NULL, NULL);
-        getSingularityCost(track, x, rb, &obj_sing, NULL, NULL);
+        getPositionCost(ref_posi, x, rb, k, &obj_contouring, NULL, NULL);
+        getHeadingCost(ref_ori, x, rb, &obj_heading, NULL, NULL);
+        getInputCost(x, u, rb, k, &obj_input, NULL, NULL);
+        getSingularityCost(x, rb, &obj_sing, NULL, NULL);
 
     }
     else if(obj && grad && !hess)
     {
-        getContouringCost(track, x, rb, k, &obj_contouring, &grad_contouring, NULL);
-        getHeadingCost(track, x, rb, &obj_heading, &grad_heading, NULL);
-        getInputCost(track, x, u, rb, k, &obj_input, &grad_input, NULL);
-        getSingularityCost(track, x, rb, &obj_sing, &grad_sing, NULL);
+        getPositionCost(ref_posi, x, rb, k, &obj_contouring, &grad_contouring, NULL);
+        getHeadingCost(ref_ori, x, rb, &obj_heading, &grad_heading, NULL);
+        getInputCost(x, u, rb, k, &obj_input, &grad_input, NULL);
+        getSingularityCost(x, rb, &obj_sing, &grad_sing, NULL);
     }
     else if(obj && grad && hess)
     {
-        getContouringCost(track, x, rb, k, &obj_contouring, &grad_contouring, &hess_contouring);
-        getHeadingCost(track, x, rb, &obj_heading, &grad_heading, &hess_heading);
-        getInputCost(track, x, u, rb, k, &obj_input, &grad_input, &hess_input);
-        getSingularityCost(track, x, rb, &obj_sing, &grad_sing, &hess_sing);
+        getPositionCost(ref_posi, x, rb, k, &obj_contouring, &grad_contouring, &hess_contouring);
+        getHeadingCost(ref_ori, x, rb, &obj_heading, &grad_heading, &hess_heading);
+        getInputCost(x, u, rb, k, &obj_input, &grad_input, &hess_input);
+        getSingularityCost(x, rb, &obj_sing, &grad_sing, &hess_sing);
     }
 
     if(obj)

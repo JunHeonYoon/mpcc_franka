@@ -1,5 +1,5 @@
 #include "Constraints/EnvCollision/EnvCollisionModel.h"
-namespace mpcc
+namespace ttmpc
 {
     EnvCollNNmodel::EnvCollNNmodel()
     {

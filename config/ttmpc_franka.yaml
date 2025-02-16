@@ -1,5 +1,5 @@
-mpcc_controller:
-    type: mpcc_franka/mpcc_controller
+ttmpc_controller:
+    type: ttmpc_franka/ttmpc_controller
     arm_id: panda
     joint_names:
         - panda_joint1

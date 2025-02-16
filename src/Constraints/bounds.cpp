@@ -15,7 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "Constraints/bounds.h"
-namespace mpcc{
+namespace ttmpc{
 Bounds::Bounds()
 {
     std::cout << "default constructor, not everything is initialized properly" << std::endl;
@@ -31,8 +31,6 @@ param_(param)
     l_bounds_x_(4) = bounds_param.lower_state_bounds.q5_l*0.9;
     l_bounds_x_(5) = bounds_param.lower_state_bounds.q6_l*0.9;
     l_bounds_x_(6) = bounds_param.lower_state_bounds.q7_l*0.9;
-    l_bounds_x_(7) = bounds_param.lower_state_bounds.s_l;
-    l_bounds_x_(8) = bounds_param.lower_state_bounds.vs_l;
 
     u_bounds_x_(0) = bounds_param.upper_state_bounds.q1_u*0.9;
     u_bounds_x_(1) = bounds_param.upper_state_bounds.q2_u*0.9;
@@ -42,7 +40,6 @@ param_(param)
     u_bounds_x_(5) = bounds_param.upper_state_bounds.q6_u*0.9;
     u_bounds_x_(6) = bounds_param.upper_state_bounds.q7_u*0.9;
     u_bounds_x_(7) = bounds_param.upper_state_bounds.s_u;
-    u_bounds_x_(8) = bounds_param.upper_state_bounds.vs_u;
 
     l_bounds_u_(0) = bounds_param.lower_input_bounds.dq1_l*0.8;
     l_bounds_u_(1) = bounds_param.lower_input_bounds.dq2_l*0.8;
@@ -51,7 +48,6 @@ param_(param)
     l_bounds_u_(4) = bounds_param.lower_input_bounds.dq5_l*0.8;
     l_bounds_u_(5) = bounds_param.lower_input_bounds.dq6_l*0.8;
     l_bounds_u_(6) = bounds_param.lower_input_bounds.dq7_l*0.8;
-    l_bounds_u_(7) = bounds_param.lower_input_bounds.dVs_l;
 
     u_bounds_u_(0) = bounds_param.upper_input_bounds.dq1_u*0.8;
     u_bounds_u_(1) = bounds_param.upper_input_bounds.dq2_u*0.8;
@@ -60,7 +56,6 @@ param_(param)
     u_bounds_u_(4) = bounds_param.upper_input_bounds.dq5_u*0.8;
     u_bounds_u_(5) = bounds_param.upper_input_bounds.dq6_u*0.8;
     u_bounds_u_(6) = bounds_param.upper_input_bounds.dq7_u*0.8;
-    u_bounds_u_(7) = bounds_param.upper_input_bounds.dVs_u;
 
     l_bounds_ddjoint_(0) = bounds_param.lower_ddjoint_bounds.ddq1_l;
     l_bounds_ddjoint_(1) = bounds_param.lower_ddjoint_bounds.ddq2_l;
@@ -82,24 +77,10 @@ param_(param)
     std::cout << "bounds initialized" << std::endl;
 }
 
-Bounds_x Bounds::getBoundsLX(const State &x) const
-{
-    Bounds_x l_bounds_x;
-    l_bounds_x = l_bounds_x_;
-    // l_bounds_x(si_index.s) = std::max((x.s - param_.s_trust_region),0.);
-    return  l_bounds_x;
-}
+
 Bounds_x Bounds::getBoundsLX() const
 {
     return  l_bounds_x_;
-}
-
-Bounds_x Bounds::getBoundsUX(const State &x,const double &track_length) const
-{
-    Bounds_x u_bounds_x;
-    u_bounds_x = u_bounds_x_;
-    // u_bounds_x(si_index.s) = std::min((x.s + param_.s_trust_region),track_length);
-    return  u_bounds_x;
 }
 
 Bounds_x Bounds::getBoundsUX() const

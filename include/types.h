@@ -14,12 +14,12 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_TYPES_H
-#define MPCC_TYPES_H
+#ifndef TTMPC_TYPES_H
+#define TTMPC_TYPES_H
 
 #include "config.h"
 #include <map>
-namespace mpcc{
+namespace ttmpc{
 /// @brief State of manipulator system
 /// @param q1  (double) joint angle 
 /// @param q2  (double) joint angle 
@@ -28,8 +28,6 @@ namespace mpcc{
 /// @param q5  (double) joint angle 
 /// @param q6  (double) joint angle 
 /// @param q7  (double) joint angle 
-/// @param s   (double) path parameter
-/// @param vs  (double) velocity of path parameter 
 struct State{ 
     double q1;  // joint angle
     double q2;  // joint angle
@@ -38,9 +36,6 @@ struct State{
     double q5;  // joint angle
     double q6;  // joint angle
     double q7;  // joint angle
-    double s;   // path parameter
-    double vs;  // velocity of path parameter
-
     void setZero()
     {
         q1 = 0.0;
@@ -50,13 +45,6 @@ struct State{
         q5 = 0.0;
         q6 = 0.0;
         q7 = 0.0;
-        s = 0.0;
-        vs = 0.0;
-    }
-    /// @brief mapping s to [0, 1]
-    void unwrap()
-    {
-        s = std::max(0.,std::min(1.,s));
     }
 
     bool operator==(const State& other) const 
@@ -67,9 +55,7 @@ struct State{
             && q4 == other.q4
             && q5 == other.q5
             && q6 == other.q6
-            && q7 == other.q7
-            && s == other.s
-            && vs == other.vs;
+            && q7 == other.q7;
     }
 };
 
@@ -81,7 +67,6 @@ struct State{
 /// @param dq5 (double) velocity of joint angle
 /// @param dq6 (double) velocity of joint angle
 /// @param dq7 (double) velocity of joint angle
-/// @param dVs (double) change of velocity of path parameter 
 struct Input{
     double dq1;
     double dq2;
@@ -90,7 +75,6 @@ struct Input{
     double dq5;
     double dq6;
     double dq7;
-    double dVs;
 
     void setZero()
     {
@@ -101,7 +85,6 @@ struct Input{
         dq5 = 0.0;
         dq6 = 0.0;
         dq7 = 0.0;
-        dVs = 0.0;
     }
 
     bool operator==(const Input& other) const 
@@ -112,9 +95,7 @@ struct Input{
             && dq4 == other.dq4
             && dq5 == other.dq5
             && dq6 == other.dq6
-            && dq7 == other.dq7
-            && dVs == other.dVs;
-    }
+            && dq7 == other.dq7;    }
 };
 
 /// @brief path of JSON files
@@ -123,7 +104,7 @@ struct Input{
 /// @param bounds_path        (std::string) path of bound parameter 
 /// @param track_path         (std::string) path of track 
 /// @param normalization_path (std::string) path of normalization parameter 
-/// @param sqo_path           (std::string) path of sqp parameter 
+/// @param sqp_path           (std::string) path of sqp parameter 
 struct PathToJson{
     std::string param_path;
     std::string cost_path;
@@ -190,4 +171,4 @@ Input vectorToInput(const InputVector &uk);
 State arrayToState(double *xk);
 Input arrayToInput(double *uk);
 }
-#endif //MPCC_TYPES_H
+#endif //TTMPC_TYPES_H

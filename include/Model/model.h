@@ -14,13 +14,13 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_MODEL_H
-#define MPCC_MODEL_H
+#ifndef TTMPC_MODEL_H
+#define TTMPC_MODEL_H
 
 #include "config.h"
 #include "types.h"
 #include "Params/params.h"
-namespace mpcc{
+namespace ttmpc{
 
 /// @brief Linear model of car: x_(k+1) = A * x_k + B * u_k + g
 /// @param A (Eigen::Matrix<double, NX, NX>) Linear part of state
@@ -66,4 +66,4 @@ private:
     const double Ts_;
 };
 }
-#endif //MPCC_MODEL_H
+#endif //TTMPC_MODEL_H

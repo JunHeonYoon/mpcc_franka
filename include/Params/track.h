@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_TRACK_H
-#define MPCC_TRACK_H
+#ifndef TTMPC_TRACK_H
+#define TTMPC_TRACK_H
 
 #include "config.h"
 
@@ -24,7 +24,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-namespace mpcc {
+namespace ttmpc {
 //used namespace
 using json = nlohmann::json;
 
@@ -75,4 +75,4 @@ private:
 };
 };
 
-#endif //MPCC_TRACK_H
+#endif //TTMPC_TRACK_H

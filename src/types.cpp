@@ -15,7 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "types.h"
-namespace mpcc{
+namespace ttmpc{
 
 StateVector stateToVector(const State &x)
 {
@@ -27,8 +27,6 @@ StateVector stateToVector(const State &x)
     xk(4) = x.q5;
     xk(5) = x.q6;
     xk(6) = x.q7;
-    xk(7) = x.s;
-    xk(8) = x.vs;
     return xk;
 }
 
@@ -68,7 +66,6 @@ InputVector inputToVector(const Input &u)
     uk(4) = u.dq5;
     uk(5) = u.dq6;
     uk(6) = u.dq7;
-    uk(7) = u.dVs;
     return uk;
 }
 
@@ -82,9 +79,6 @@ State vectorToState(const StateVector &xk)
     x.q5 = xk(4);
     x.q6 = xk(5);
     x.q7 = xk(6);
-    x.s  = xk(7);
-    x.vs = xk(8);
-
     return x;
 }
 
@@ -98,8 +92,6 @@ Input vectorToInput(const InputVector &uk)
     u.dq5 = uk(4);
     u.dq6 = uk(5);
     u.dq7 = uk(6);
-    u.dVs = uk(7);
-
     return u;
 }
 
@@ -113,9 +105,6 @@ State arrayToState(double *xk)
     x.q5 = xk[4];
     x.q6 = xk[5];
     x.q7 = xk[6];
-    x.s  = xk[7];
-    x.vs = xk[8];
-
     return x;
 }
 
@@ -129,8 +118,6 @@ Input arrayToInput(double *uk)
     u.dq5 = uk[4];
     u.dq6 = uk[5];
     u.dq7 = uk[6];
-    u.dVs = uk[7];
-
     return u;
 }
 }

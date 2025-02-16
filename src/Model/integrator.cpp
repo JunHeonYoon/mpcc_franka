@@ -15,7 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "Model/integrator.h"
-namespace mpcc{
+namespace ttmpc{
 Integrator::Integrator()
 {
     std::cout << "default constructor, not everything is initialized properly" << std::endl;

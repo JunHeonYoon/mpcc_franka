@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_ARC_LENGTH_SPLINE_H
-#define MPCC_ARC_LENGTH_SPLINE_H
+#ifndef TTMPC_ARC_LENGTH_SPLINE_H
+#define TTMPC_ARC_LENGTH_SPLINE_H
 
 #include "Model/robot_model.h"
 #include "cubic_spline.h"
@@ -25,7 +25,7 @@
 #include <map>
 #include <vector>
 
-namespace mpcc{
+namespace ttmpc{
 
 /// @brief raw path data
 /// @param X (Eigen::VectorXd) X position data
@@ -57,6 +57,14 @@ struct PathData{
     int n_points;
 };
 
+/// @brief trajectory data
+/// @param P (std::vector<Eigen::Vector3d>) position data
+/// @param R (std::vector<Eigen::Matrix3d>) Rotation matrix data
+struct Traj{
+    std::vector<Eigen::Vector3d> P;
+    std::vector<Eigen::Matrix3d> R;
+};
+
 class ArcLengthSpline {
 public:
     ArcLengthSpline();
@@ -68,7 +76,8 @@ public:
     /// @param Y (Eigen::VectorXd) Y position data
     /// @param Z (Eigen::VectorXd) Z position data
     /// @param R (std::vector<Eigen::Matrix3d>) Rotation matrix data
-    void gen6DSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R);
+    /// @param Ts (double) Sampling time
+    void gen6DSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R, const double Ts);
 
     /// @brief get X-Y-Z position data given path parameter (s)
     /// @param s (double) path parameter 
@@ -79,6 +88,15 @@ public:
     /// @param s (double) path parameter 
     /// @return (Eigen::Matrix3d) Orientation data
     Eigen::Matrix3d getOrientation(double) const;
+
+    /// @brief get N reference trajectory w.r.t current time
+    /// @param time_idx (int) current time_index
+    /// @return (Traj) N reference trajectory
+    Traj getNTrajectroy(const int &time_idx);
+
+    /// @brief get whole reference trajectory
+    /// @return (Traj) total reference trajectory
+    Traj getTrajectroy();
 
     /// @brief get X'(s)-Y'(s)-Z'(s) position data derivatived by path parameter (s) given path parameter (s)
     /// @param  (double) path parameter 
@@ -161,6 +179,11 @@ private:
     /// @return (double) unwrapped path parameter (s) data
     double unwrapInput(double x) const;
 
+    /// @brief compute total end-effector task trajectory considering desired end-effector velocity and sampling time
+    void computeTrajectory(const double Ts);
+
+    Traj traj_;
+
     PathData path_data_;
     CubicSpline spline_x_;
     CubicSpline spline_y_;
@@ -169,4 +192,4 @@ private:
     Param param_;
 };
 }
-#endif //MPCC_ARC_LENGTH_SPLINE_H
+#endif //TTMPC_ARC_LENGTH_SPLINE_H

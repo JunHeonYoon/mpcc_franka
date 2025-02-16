@@ -14,8 +14,8 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef MPCC_OSQP_INTERFACE_H
-#define MPCC_OSQP_INTERFACE_H
+#ifndef TTMPC_OSQP_INTERFACE_H
+#define TTMPC_OSQP_INTERFACE_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -40,7 +40,7 @@
 #include <vector>
 #include <thread>
 
-namespace mpcc{
+namespace ttmpc{
 
 /// @brief parameters for optimization, state and control input of MPC
 /// @param xk  (State) state
@@ -84,10 +84,9 @@ public:
     OsqpInterface(double Ts,const PathToJson &path,const ParamValue &param_value);
     void setTrack(const ArcLengthSpline track);
     void setParam(const ParamValue &param_value);
-    // void setEnvData(const std::vector<float> &voxel);
     void setEnvData(const Eigen::Vector3d &obs_position, const double &obs_radius);
     void setCurrentInput(const Input &cutrent_input);
-    void setInitialGuess(const std::vector<OptVariables> &initial_guess);
+    void setInitialGuess(const std::vector<OptVariables> &initial_guess, const int &time_idx);
     bool solveOCP(std::vector<OptVariables> &opt_sol, Status *status, ComputeTime *mpc_time);
     ~OsqpInterface(){ std::cout << "Deleting Osqp Interface" << std::endl;}
 
@@ -115,6 +114,8 @@ private:
     static const int N_ineqb = N_var + N*NU; // add ddot joint constraint
     static const int N_ineqp = (N+1)*NPC; 
     static const int N_constr = N_eq + N_ineqb + N_ineqp;
+
+    int current_time_idx_;
 
     Input current_u_;
     std::vector<OptVariables> initial_guess_;
@@ -173,4 +174,4 @@ private:
     void printOptVar(std::vector<OptVariables> opt_var);
 };
 }
-#endif //MPCC_OSQP_INTERFACE_H
+#endif //TTMPC_OSQP_INTERFACE_H

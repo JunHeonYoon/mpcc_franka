@@ -16,7 +16,7 @@
 
 #include "Spline/cubic_spline_rot.h"
 
-namespace mpcc{
+namespace ttmpc{
 CubicSplineRot::CubicSplineRot()
 : data_set_(false)
 {
