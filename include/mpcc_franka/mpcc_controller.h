@@ -129,7 +129,7 @@ class mpcc_controller : public controller_interface::MultiInterfaceController<
   ros::Time control_start_time_;
   SuhanBenchmark bench_timer_;
 
-  enum CTRL_MODE{NONE, HOME, MPCC, MPCC_PICK, MPCC_DROP, MPCC_PLACE};
+  enum CTRL_MODE{NONE, HOME, MPCC, READY, MPCC_PICK, MPCC_DROP, MPCC_PLACE};
   CTRL_MODE control_mode_{NONE};
 	bool is_mode_changed_ {false};
 
@@ -186,6 +186,7 @@ class mpcc_controller : public controller_interface::MultiInterfaceController<
   double pred_env_min_dist_{0.};
   double mani_;
   double contour_error_{0.};
+  double heading_error_{0.};
 
   ros::Publisher mpcc_ref_path_pub_;
   ros::Publisher mpcc_opt_traj_pub_;
