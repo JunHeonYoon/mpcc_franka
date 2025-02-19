@@ -6,15 +6,15 @@ r = 0.1
 t = np.linspace(pi/2, 2*pi+pi/2,10)
 
 # For Self  & Singularity
-# x = 2.5*r * np.sin(t)
-# y = 2.0*r * np.sin(2 * t)
-# z = 2.3*r * np.cos(t)
+x = 2.38*r * np.sin(t)
+y = 2.0*r * np.sin(2 * t)
+z = 2.3*r * np.cos(t)
 
-# rot = R.from_matrix([[1, 0, 0],
-#                      [0, 1, 0],
-#                      [0, 0, 1]])
-# quat = rot.as_quat()
-# quat_list = np.tile(quat, (x.size, 1))
+rot = R.from_matrix([[1, 0, 0],
+                     [0, 1, 0],
+                     [0, 0, 1]])
+quat = rot.as_quat()
+quat_list = np.tile(quat, (x.size, 1))
 
 # For Self collision & Env collision
 # x = 2.2*r * np.sin(t)
@@ -44,20 +44,20 @@ t = np.linspace(pi/2, 2*pi+pi/2,10)
 # quat2_list = np.tile(quat2, (x.size-quat1_list.shape[0], 1))
 # quat_list = np.concatenate([quat1_list, quat2_list], axis=0)
 
-x = np.array([0, 0])
-y = np.array([0, 0])
-z = np.array([0, 0.2])
-rot1 = R.from_matrix([[1, 0, 0],
-                      [0, 1, 0],
-                      [0, 0, 1]])
-rot2 = R.from_matrix([[0,  0, -1],
-                      [0,  1, 0],
-                      [1,  0, 0]])
-quat1 = rot1.as_quat()
-quat2 = rot2.as_quat()
-quat1_list = np.tile(quat1, (int(x.size/2), 1))
-quat2_list = np.tile(quat2, (x.size-quat1_list.shape[0], 1))
-quat_list = np.concatenate([quat1_list, quat2_list], axis=0)
+# x = np.array([0, 0])
+# y = np.array([0, 0])
+# z = np.array([0, 0.2])
+# rot1 = R.from_matrix([[1, 0, 0],
+#                       [0, 1, 0],
+#                       [0, 0, 1]])
+# rot2 = R.from_matrix([[0,  0, -1],
+#                       [0,  1, 0],
+#                       [1,  0, 0]])
+# quat1 = rot1.as_quat()
+# quat2 = rot2.as_quat()
+# quat1_list = np.tile(quat1, (int(x.size/2), 1))
+# quat2_list = np.tile(quat2, (x.size-quat1_list.shape[0], 1))
+# quat_list = np.concatenate([quat1_list, quat2_list], axis=0)
 
 # x = [0, -0.2, -0.4, 0]
 # y = [0, 0, 0, 0]
