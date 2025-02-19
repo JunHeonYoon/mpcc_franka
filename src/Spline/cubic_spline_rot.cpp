@@ -264,13 +264,34 @@ Eigen::Matrix3d CubicSplineRot::getPoint(double x) const
     return spline_data_.R_data[index] * ExpMatrix(log_RR*(spline_params_.a[index] + spline_params_.b[index]*dx + spline_params_.c[index]*dx2 + spline_params_.d[index]*dx3));
 }
 
+// Eigen::Vector3d CubicSplineRot::getDerivative(double x) const
+// {
+//     // evaluate first derivative of spline
+//     // identical to noram spline with LogMatrix(R_i^T * R_i+1))[b + 2c dx + 3d dx^2])
+//     int index;
+//     double x_i;
+//     double dx,dx2;
+
+//     x = unwrapInput(x);
+//     index = getIndex(x);
+//     if(index == spline_data_.n_points-1) return Eigen::Vector3d::Zero();
+
+//     x_i = spline_data_.x_data(index);
+
+//     dx = x-x_i;
+//     dx2 = dx*dx;
+
+//     Eigen::Vector3d Log_RR = getInverseSkewVector(LogMatrix(spline_data_.R_data[index].transpose() * spline_data_.R_data[index+1]));
+//     return Log_RR * (spline_params_.b[index] + 2.0*spline_params_.c[index]*dx + 3.0*spline_params_.d[index]*dx2);
+// }
+
 Eigen::Vector3d CubicSplineRot::getDerivative(double x) const
 {
     // evaluate first derivative of spline
     // identical to noram spline with LogMatrix(R_i^T * R_i+1))[b + 2c dx + 3d dx^2])
     int index;
     double x_i;
-    double dx,dx2;
+    double dx,dx2,dx3;
 
     x = unwrapInput(x);
     index = getIndex(x);
@@ -278,10 +299,26 @@ Eigen::Vector3d CubicSplineRot::getDerivative(double x) const
 
     x_i = spline_data_.x_data(index);
 
+    // compute diff to point and it's powers
     dx = x-x_i;
     dx2 = dx*dx;
+    dx3 = dx*dx2;
 
-    Eigen::Vector3d Log_RR = getInverseSkewVector(LogMatrix(spline_data_.R_data[index].transpose() * spline_data_.R_data[index+1]));
-    return Log_RR * (spline_params_.b[index] + 2.0*spline_params_.c[index]*dx + 3.0*spline_params_.d[index]*dx2);
+    Eigen::Vector3d log_RR = getInverseSkewVector(LogMatrix(spline_data_.R_data[index].transpose() * spline_data_.R_data[index+1])); 
+    Eigen::Vector3d Theta_tau = log_RR*(spline_params_.a[index] + spline_params_.b[index]*dx + spline_params_.c[index]*dx2 + spline_params_.d[index]*dx3);
+    double Theta_tau_norm = Theta_tau.norm();
+    Eigen::Matrix3d J_r;
+    if(Theta_tau_norm < 1E-8) J_r.setIdentity();
+    else
+    {
+        J_r = Eigen::Matrix3d::Identity() - 
+            (1-cos(Theta_tau_norm)) / pow(Theta_tau_norm,2) * getSkewMatrix(Theta_tau) + 
+            (Theta_tau_norm - sin(Theta_tau_norm)) / pow(Theta_tau_norm,3) * getSkewMatrix(Theta_tau) * getSkewMatrix(Theta_tau);
+    }
+
+
+    return  J_r*log_RR*(1. * spline_params_.b[index]  + 
+                  2. * spline_params_.c[index] * dx + 
+                  3. * spline_params_.d[index] * dx2);
 }
 }
