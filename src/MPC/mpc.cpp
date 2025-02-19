@@ -113,7 +113,7 @@ bool MPC::checkIsEnd(const State &x0)
     double resi_posi = (end_pose_.block(0,3,3,1) -  ee_pose.block(0,3,3,1)).norm();
     double resi_ori =  (getInverseSkewVector(LogMatrix(end_pose_.block(0,0,3,3).transpose()*ee_pose.block(0,0,3,3)))).norm();
     double resi_s = fabs(x0.s - 1.0);
-    if(resi_posi < 0.005 && resi_ori < 0.01 && resi_s < 0.01) return true;
+    if(resi_posi < 0.001 && resi_ori < 0.01 && resi_s < 0.005) return true;
     else return false;
 }
 
