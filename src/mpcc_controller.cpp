@@ -112,16 +112,16 @@ bool mpcc_controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandl
   mpcc_comp_time_info_file_.open(mpcc::pkg_path + "result_data/mpcc_comp_time_info.txt");
   obs_info_file_.open(mpcc::pkg_path + "result_data/obs_info.txt");
 
-  joint_info_file_ << "time(0)[sec], q(1-7)[rad], qdot(8-14)[rad/s]" << std::endl;
-  s_info_file_ << "time(0)[sec], s(1)[m], vs(2)[m/s], dVs(3)[m/s^2]" << std::endl;
-  ee_vel_info_file_ << "time(0)[sec], v(1-3)[m/s], w(4-6)[rad/s]" << std::endl;
-  min_dist_info_file_ << "time(0)[sec], self(1), env(2)" << std::endl;
-  mani_info_file_ << "time(0)[sec], manipulability(1)" << std::endl;
-  contour_error_info_file_ << "time(0)[sec], contouring error(1)[m]" << std::endl;
-  mpcc_ref_path_info_file_ << "position(0-2)[m], quaternion(3-6)" << std::endl;
-  mpcc_opt_traj_info_file_ << "time(0)[sec], N=0(1-7), ..., N=10(71-77)" << std::endl;
-  mpcc_comp_time_info_file_ << "time(0)[sec], total(1)[sec], set_env(2)[sec], set_qp(3)[sec], solve_qp(4)[sec], get_alpha(5)[sec]" << std::endl;
-  obs_info_file_ << "time(0)[sec], radius(1)[m], position(2-4)[m]" << std::endl;
+  joint_info_file_ << "time(0)[sec], mode(1), q(2-8)[rad], qdot(9-15)[rad/s]" << std::endl;
+  s_info_file_ << "time(0)[sec], mode(1), s(2)[m], vs(3)[m/s], dVs(4)[m/s^2]" << std::endl;
+  ee_vel_info_file_ << "time(0)[sec], mode(1), v(2-4)[m/s], w(5-7)[rad/s]" << std::endl;
+  min_dist_info_file_ << "time(0)[sec], mode(1), self(2)[m], env(3)[m]" << std::endl;
+  mani_info_file_ << "time(0)[sec], mode(1), manipulability(2)" << std::endl;
+  contour_error_info_file_ << "time(0)[sec], mode(1), contouring error(2)[m], heading error(3)[rad]" << std::endl;
+  mpcc_ref_path_info_file_ << "mode(0), position(1-3)[m], quaternion(4-7)" << std::endl;
+  mpcc_opt_traj_info_file_ << "time(0)[sec], mode(1), N=0(2-8), ..., N=10(72-78)" << std::endl;
+  mpcc_comp_time_info_file_ << "time(0)[sec], mode(1), total(2)[sec], set_env(3)[sec], set_qp(4)[sec], solve_qp(5)[sec], get_alpha(6)[sec]" << std::endl;
+  obs_info_file_ << "time(0)[sec], mode(1), radius(2)[m], position(3-5)[m]" << std::endl;
   // ======================================
   state_pub_thread_ = std::thread(&mpcc_controller::StatePubProc, this);
   return true;
@@ -383,15 +383,20 @@ void mpcc_controller::asyncCalculationProc()
             mpcc_ref_path.poses.push_back(path_point);
 
             // logging data
-            mpcc_ref_path_info_file_ << path_point.pose.position.x << " "
-                                    << path_point.pose.position.y << " "
-                                    << path_point.pose.position.z << " "
-                                    << path_point.pose.orientation.x << " "
-                                    << path_point.pose.orientation.y << " "
-                                    << path_point.pose.orientation.z << " "
-                                    << path_point.pose.orientation.w << std::endl;
+            mpcc_ref_path_info_file_ << control_mode_ << " "
+                                     << path_point.pose.position.x << " "
+                                     << path_point.pose.position.y << " "
+                                     << path_point.pose.position.z << " "
+                                     << path_point.pose.orientation.x << " "
+                                     << path_point.pose.orientation.y << " "
+                                     << path_point.pose.orientation.z << " "
+                                     << path_point.pose.orientation.w << std::endl;
           }
           mpcc_ref_path_pub_.publish(mpcc_ref_path);
+        }
+        else if(control_mode_ == READY)
+        {
+          std::cout << "======================== Mode cahnge: ready position ========================" << std::endl;
         }
         else if(control_mode_ == MPCC_PICK)
         {
@@ -406,9 +411,9 @@ void mpcc_controller::asyncCalculationProc()
           {
             Eigen::Vector3d waypoint_x, waypoint_y, waypoint_z;
             std::vector<Eigen::Matrix3d> waypoint_r;
-            waypoint_x << x_init_(0), x_init_(0),                               transformStamped.transform.translation.x - 0.03;
+            waypoint_x << x_init_(0), x_init_(0),                               transformStamped.transform.translation.x - 0.059 - 0.021;
             waypoint_y << x_init_(1), transformStamped.transform.translation.y, transformStamped.transform.translation.y;
-            waypoint_z << x_init_(2), x_init_(2),                               transformStamped.transform.translation.z + 0.027;
+            waypoint_z << x_init_(2), x_init_(2),                               transformStamped.transform.translation.z + 0.07;
 
             waypoint_r.resize(waypoint_x.size());
             waypoint_r[0] = rotation_init_;
@@ -587,7 +592,13 @@ void mpcc_controller::asyncCalculationProc()
       {
         Eigen::Matrix<double, 7, 1> target_q;
         target_q << 0, 0, 0, -M_PI/2, 0, M_PI/2, M_PI/4;
-        // target_q << 0, -M_PI/4, 0, -3*M_PI/4, 0, M_PI/2, M_PI/4;
+        mpcc_controller::moveJointPosition(target_q, 4.0);
+      }
+      if(control_mode_ == READY)
+      {
+        Eigen::Matrix<double, 7, 1> target_q;
+        // target_q << 0.000, -1.087,  0.026, -2.369, 0.00,  0.990,  M_PI/4;
+        target_q << 0.0, -0.824,  0.0, -2.254, 0.0,  0.963,  M_PI/4;
         mpcc_controller::moveJointPosition(target_q, 4.0);
       }
       else if(control_mode_ == MPCC)
@@ -689,6 +700,9 @@ void mpcc_controller::modeChangeReaderProc()
             case 'm':
               mpcc_controller::setMode(MPCC);
               break;
+            case 'r':
+              mpcc_controller::setMode(READY);
+              break;
             case 'p':
               mpcc_controller::setMode(MPCC_PICK);
               break;
@@ -767,11 +781,14 @@ void mpcc_controller::StatePubProc()
       if((control_mode_ == MPCC || control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
       {
         Eigen::Vector3d ref_posi = spline_track_.getPosition(s_info_.s);
-        contour_error_ = (ref_posi - x_).norm()*100.;
+        Eigen::Matrix3d ref_ori = spline_track_.getOrientation(s_info_.s);
+        contour_error_ = (ref_posi - x_).norm();
+        heading_error_ = mpcc::getInverseSkewVector(mpcc::LogMatrix(ref_ori.transpose()*rotation_)).norm();
       }
       else
       {
         contour_error_ = 0.;
+        heading_error_ = 0.;
       }
 
       // publish speed of EE, manipulability, self minimum distance, env minimum distance, contouring error
@@ -791,13 +808,13 @@ void mpcc_controller::StatePubProc()
       // logging data
       if((control_mode_ == MPCC || control_mode_ == MPCC_PICK || control_mode_ == MPCC_PLACE || control_mode_ == MPCC_DROP) && mpcc_thread_enabled_)
       {
-        joint_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << q_.transpose() << " " << qdot_.transpose() << std::endl;
-        s_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << s_info_.s << " " << s_info_.vs << " " << s_info_.dVs << std::endl;
-        ee_vel_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << x_dot_.transpose() << std::endl;
-        min_dist_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << pred_sel_min_dist_ << " " << pred_env_min_dist_ << std::endl;
-        mani_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << mani_ << std::endl;
-        contour_error_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << contour_error_ << std::endl;
-        obs_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << obs_radi_ << " " << obs_posi_.transpose() << std::endl;
+        joint_info_file_         << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << q_.transpose()     << " " << qdot_.transpose()    << std::endl;
+        s_info_file_             << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << s_info_.s          << " " << s_info_.vs            << " " << s_info_.dVs << std::endl;
+        ee_vel_info_file_        << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << x_dot_.transpose() << std::endl;
+        min_dist_info_file_      << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << pred_sel_min_dist_ << " " << pred_env_min_dist_    << std::endl;
+        mani_info_file_          << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << mani_              << std::endl;
+        contour_error_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << contour_error_     << " " << heading_error_        << std::endl;
+        obs_info_file_           << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << obs_radi_          << " " << obs_posi_.transpose() << std::endl;
       }
     }
   }
@@ -896,6 +913,7 @@ void mpcc_controller::asyncMPCCProc()
 
           // logging data
           mpcc_opt_traj_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " "
+                                   << control_mode_ << " "
                                    << pose.pose.position.x << " "
                                    << pose.pose.position.y << " "
                                    << pose.pose.position.z << " "
@@ -922,6 +940,7 @@ void mpcc_controller::asyncMPCCProc()
 
         // logging data
         mpcc_comp_time_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " "
+                                  << control_mode_ << " "
                                   << mpc_sol.compute_time.total << " "
                                   << mpc_sol.compute_time.set_env << " "
                                   << mpc_sol.compute_time.set_qp << " "
