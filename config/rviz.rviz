@@ -342,15 +342,15 @@ Visualization Manager:
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.10000000149011612
-      Line Style: Lines
-      Line Width: 0.029999999329447746
+      Line Style: Billboards
+      Line Width: 0.009999999776482582
       Name: Path
       Offset:
         X: 0
         Y: 0
         Z: 0
       Pose Color: 255; 85; 255
-      Pose Style: None
+      Pose Style: Axes
       Queue Size: 10
       Radius: 0.009999999776482582
       Shaft Diameter: 0.10000000149011612
@@ -395,7 +395,8 @@ Visualization Manager:
       Marker Topic: /visualization_marker
       Name: Marker
       Namespaces:
-        {}
+        cuboid: true
+        sphere: true
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -451,9 +452,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.5844653844833374
-        Y: 0.16499538719654083
-        Z: 0.9163343906402588
+        X: 0.6051488518714905
+        Y: 0.13329285383224487
+        Z: 0.8997923731803894
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
