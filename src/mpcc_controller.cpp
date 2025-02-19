@@ -594,7 +594,7 @@ void mpcc_controller::asyncCalculationProc()
         target_q << 0, 0, 0, -M_PI/2, 0, M_PI/2, M_PI/4;
         mpcc_controller::moveJointPosition(target_q, 4.0);
       }
-      if(control_mode_ == READY)
+      else if(control_mode_ == READY)
       {
         Eigen::Matrix<double, 7, 1> target_q;
         // target_q << 0.000, -1.087,  0.026, -2.369, 0.00,  0.990,  M_PI/4;
