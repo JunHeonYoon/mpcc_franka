@@ -235,45 +235,54 @@ void ArcLengthSpline::computeTrajectory(const double Ts)
 
 void ArcLengthSpline::fitSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R)
 {
-    // successively fit spline -> re-sample path -> compute arc length
-    // temporary spline class only used for fitting
+    // // successively fit spline -> re-sample path -> compute arc length
+    // // temporary spline class only used for fitting
+    // Eigen::VectorXd s_approximation;
+    // PathData first_refined_path,second_refined_path;
+
+    // // s_approximation = compArcLength(X,Y,Z,R);
+    // // s_approximation = s_approximation / s_approximation.tail(1)(0);
+    // s_approximation.setLinSpaced(X.size(),0.,1.);
+    // // std::cout << s_approximation << std::endl;
+
+    // CubicSpline first_spline_x,first_spline_y,first_spline_z; CubicSplineRot first_spline_r;
+    // CubicSpline second_spline_x,second_spline_y,second_spline_z; CubicSplineRot second_spline_r;
+    // // 1. spline fit
+    // first_spline_x.genSpline(s_approximation,X,false);
+    // first_spline_y.genSpline(s_approximation,Y,false);
+    // first_spline_z.genSpline(s_approximation,Z,false);
+    // first_spline_r.genSpline(s_approximation,R,false);
+    // // 1. re-sample
+    // first_refined_path = resamplePath(first_spline_x,first_spline_y,first_spline_z,first_spline_r);
+    // // s_approximation = compArcLength(first_refined_path.X,first_refined_path.Y,first_refined_path.Z,first_refined_path.R);
+    // // s_approximation = s_approximation / s_approximation.tail(1)(0);
+    // s_approximation.setLinSpaced(first_refined_path.X.size(),0.,1.);
+    // // std::cout << s_approximation << std::endl;
+    // ////////////////////////////////////////////
+    // // 2. spline fit
+    // second_spline_x.genSpline(s_approximation,first_refined_path.X,false);
+    // second_spline_y.genSpline(s_approximation,first_refined_path.Y,false);
+    // second_spline_z.genSpline(s_approximation,first_refined_path.Z,false);
+    // second_spline_r.genSpline(s_approximation,first_refined_path.R,false);
+    // // 2. re-sample
+    // second_refined_path = resamplePath(second_spline_x,second_spline_y,second_spline_z,second_spline_r);
+    // ////////////////////////////////////////////
+    // setRegularData(second_refined_path.X,second_refined_path.Y,second_refined_path.Z,second_refined_path.R,second_refined_path.s);
+    // // setData(second_refined_path.X,second_refined_path.Y);
+    // // Final spline fit with fixed Delta_s
+    // spline_x_.genSpline(path_data_.s,path_data_.X,true);
+    // spline_y_.genSpline(path_data_.s,path_data_.Y,true);
+    // spline_z_.genSpline(path_data_.s,path_data_.Z,true);
+    // spline_r_.genSpline(path_data_.s,path_data_.R,true);
+    // ===========================================================================================================
     Eigen::VectorXd s_approximation;
-    PathData first_refined_path,second_refined_path;
-
-    // s_approximation = compArcLength(X,Y,Z,R);
-    // s_approximation = s_approximation / s_approximation.tail(1)(0);
     s_approximation.setLinSpaced(X.size(),0.,1.);
-    // std::cout << s_approximation << std::endl;
+    setData(X,Y,Z,R);
 
-    CubicSpline first_spline_x,first_spline_y,first_spline_z; CubicSplineRot first_spline_r;
-    CubicSpline second_spline_x,second_spline_y,second_spline_z; CubicSplineRot second_spline_r;
-    // 1. spline fit
-    first_spline_x.genSpline(s_approximation,X,false);
-    first_spline_y.genSpline(s_approximation,Y,false);
-    first_spline_z.genSpline(s_approximation,Z,false);
-    first_spline_r.genSpline(s_approximation,R,false);
-    // 1. re-sample
-    first_refined_path = resamplePath(first_spline_x,first_spline_y,first_spline_z,first_spline_r);
-    // s_approximation = compArcLength(first_refined_path.X,first_refined_path.Y,first_refined_path.Z,first_refined_path.R);
-    // s_approximation = s_approximation / s_approximation.tail(1)(0);
-    s_approximation.setLinSpaced(first_refined_path.X.size(),0.,1.);
-    // std::cout << s_approximation << std::endl;
-    ////////////////////////////////////////////
-    // 2. spline fit
-    second_spline_x.genSpline(s_approximation,first_refined_path.X,false);
-    second_spline_y.genSpline(s_approximation,first_refined_path.Y,false);
-    second_spline_z.genSpline(s_approximation,first_refined_path.Z,false);
-    second_spline_r.genSpline(s_approximation,first_refined_path.R,false);
-    // 2. re-sample
-    second_refined_path = resamplePath(second_spline_x,second_spline_y,second_spline_z,second_spline_r);
-    ////////////////////////////////////////////
-    setRegularData(second_refined_path.X,second_refined_path.Y,second_refined_path.Z,second_refined_path.R,second_refined_path.s);
-    // setData(second_refined_path.X,second_refined_path.Y);
-    // Final spline fit with fixed Delta_s
-    spline_x_.genSpline(path_data_.s,path_data_.X,true);
-    spline_y_.genSpline(path_data_.s,path_data_.Y,true);
-    spline_z_.genSpline(path_data_.s,path_data_.Z,true);
-    spline_r_.genSpline(path_data_.s,path_data_.R,true);
+    spline_x_.genSpline(path_data_.s,path_data_.X,false);
+    spline_y_.genSpline(path_data_.s,path_data_.Y,false);
+    spline_z_.genSpline(path_data_.s,path_data_.Z,false);
+    spline_r_.genSpline(path_data_.s,path_data_.R,false);
 }
 
 void ArcLengthSpline::gen6DSpline(const Eigen::VectorXd &X,const Eigen::VectorXd &Y,const Eigen::VectorXd &Z,const std::vector<Eigen::Matrix3d> &R,const double Ts)
@@ -371,7 +380,7 @@ double ArcLengthSpline::projectOnSpline(const double &s, const Eigen::Matrix4d e
 
     if (dist >= param_.max_dist_proj)
     {
-        std::cout << "dist too large" << std::endl;
+        // std::cout << "dist too large" << std::endl;
         Eigen::ArrayXd diff_x_all = path_data_.X.array() - ee_pose(0,3);
         Eigen::ArrayXd diff_y_all = path_data_.Y.array() - ee_pose(1,3);
         Eigen::ArrayXd diff_z_all = path_data_.Z.array() - ee_pose(2,3);
