@@ -96,6 +96,8 @@ public:
     /// @param param_value (ParamValue) parameter value
     void setParam(const ParamValue &param_value);
 
+    void updateS(const State &x0, double &virtual_s);
+
     bool checkIsEnd(const State &x0, const int &time_idx);
 
     std::unique_ptr<RobotModel> robot_;

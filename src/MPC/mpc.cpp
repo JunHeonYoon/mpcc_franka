@@ -83,12 +83,25 @@ bool MPC::runMPC(MPCReturn &mpc_return, State &x0, Input &u0, const int &time_id
     return runMPC_(mpc_return, x0, u0, time_idx, dummy_position, dummy_radius);
 }
 
+void MPC::updateS(const State &x0, double &virtual_s)
+{
+    // correct s
+    Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
+    virtual_s = track_.projectOnSpline(virtual_s, ee_pose);
+
+    //correct vs
+    // Eigen::VectorXd ee_vel = robot_->getJacobian(stateToJointVector(x0)) * inputTodJointVector(u0);
+    // Eigen::Vector3d ds_posi_dir = track_.getDerivative(x0.s).normalized();
+    // Eigen::Vector3d ds_ori_dir = track_.getOrientationDerivative(x0.s).normalized();
+    // x0.vs = (ee_vel.head(3).dot(ds_posi_dir) + ee_vel.tail(3).dot(ds_ori_dir)) / track_.getLength();
+}
+
 bool MPC::checkIsEnd(const State &x0, const int &time_idx)
 {
     Eigen::Matrix4d ee_pose = robot_->getEETransformation(stateToJointVector(x0));
     double resi_posi = (end_pose_.block(0,3,3,1) -  ee_pose.block(0,3,3,1)).norm();
     double resi_ori =  (getInverseSkewVector(LogMatrix(end_pose_.block(0,0,3,3).transpose()*ee_pose.block(0,0,3,3)))).norm();
-    if(resi_posi < 0.005 && resi_ori < 0.01 && time_idx >= track_.traj_.P.size()) return true;
+    if(resi_posi < 0.001 && resi_ori < 0.01 && time_idx >= track_.traj_.P.size()) return true;
     else return false;
 }
 
