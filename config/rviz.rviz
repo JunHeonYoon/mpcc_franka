@@ -342,8 +342,8 @@ Visualization Manager:
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.10000000149011612
-      Line Style: Lines
-      Line Width: 0.029999999329447746
+      Line Style: Billboards
+      Line Width: 0.009999999776482582
       Name: Path
       Offset:
         X: 0
@@ -371,7 +371,7 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
-      Topic: /ttmpc/ee_pose
+      Topic: /mpcc/ee_pose
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -395,128 +395,17 @@ Visualization Manager:
       Marker Topic: /visualization_marker
       Name: Marker
       Namespaces:
-        {}
+        cuboid: true
+        sphere: true
       Queue Size: 100
       Value: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base_footprint:
-          Value: false
-        base_link:
-          Value: false
-        d435i_bottom_screw_frame:
-          Value: false
-        d435i_color_frame:
-          Value: false
-        d435i_color_optical_frame:
-          Value: false
-        d435i_depth_frame:
-          Value: false
-        d435i_depth_optical_frame:
-          Value: false
-        d435i_infra1_frame:
-          Value: false
-        d435i_infra1_optical_frame:
-          Value: false
-        d435i_infra2_frame:
-          Value: false
-        d435i_infra2_optical_frame:
-          Value: false
-        d435i_link:
-          Value: false
-        front_bumper_link:
-          Value: false
-        front_left_wheel_link:
-          Value: false
-        front_right_wheel_link:
-          Value: false
-        imu_link:
-          Value: false
-        inertial_link:
-          Value: false
-        kinect_base:
-          Value: false
-        kinect_depth_link:
-          Value: false
-        kinect_imu_link:
-          Value: false
-        kinect_rgb_link:
-          Value: false
-        object_frame:
-          Value: true
-        panda_EE:
-          Value: false
-        panda_K:
-          Value: false
-        panda_NE:
-          Value: false
-        panda_hand:
-          Value: false
-        panda_hand_sc:
-          Value: false
-        panda_hand_tcp:
-          Value: false
-        panda_leftfinger:
-          Value: false
-        panda_link0:
-          Value: false
-        panda_link0_sc:
-          Value: false
-        panda_link1:
-          Value: false
-        panda_link1_sc:
-          Value: false
-        panda_link2:
-          Value: false
-        panda_link2_sc:
-          Value: false
-        panda_link3:
-          Value: false
-        panda_link3_sc:
-          Value: false
-        panda_link4:
-          Value: false
-        panda_link4_sc:
-          Value: false
-        panda_link5:
-          Value: false
-        panda_link5_sc:
-          Value: false
-        panda_link6:
-          Value: false
-        panda_link6_sc:
-          Value: false
-        panda_link7:
-          Value: false
-        panda_link7_sc:
-          Value: false
-        panda_link8:
-          Value: false
-        panda_rightfinger:
-          Value: false
-        rear_bumper_link:
-          Value: false
-        rear_left_wheel_link:
-          Value: false
-        rear_right_wheel_link:
-          Value: false
-        top_chassis_link:
-          Value: false
-        top_plate_front_link:
-          Value: false
-        top_plate_link:
-          Value: false
-        top_plate_rear_link:
-          Value: false
-        top_structure_link:
-          Value: false
-        user_rail_link:
-          Value: false
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -524,97 +413,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_link:
-          base_footprint:
-            {}
-          front_bumper_link:
-            {}
-          front_left_wheel_link:
-            {}
-          front_right_wheel_link:
-            {}
-          imu_link:
-            {}
-          inertial_link:
-            {}
-          panda_link0:
-            kinect_rgb_link:
-              kinect_depth_link:
-                kinect_base:
-                  {}
-                kinect_imu_link:
-                  {}
-            panda_link0_sc:
-              {}
-            panda_link1:
-              panda_link1_sc:
-                {}
-              panda_link2:
-                panda_link2_sc:
-                  {}
-                panda_link3:
-                  panda_link3_sc:
-                    {}
-                  panda_link4:
-                    panda_link4_sc:
-                      {}
-                    panda_link5:
-                      panda_link5_sc:
-                        {}
-                      panda_link6:
-                        panda_link6_sc:
-                          {}
-                        panda_link7:
-                          panda_link7_sc:
-                            {}
-                          panda_link8:
-                            panda_NE:
-                              panda_EE:
-                                panda_K:
-                                  {}
-                            panda_hand:
-                              d435i_color_optical_frame:
-                                d435i_color_frame:
-                                  d435i_link:
-                                    d435i_bottom_screw_frame:
-                                      {}
-                                    d435i_depth_frame:
-                                      d435i_depth_optical_frame:
-                                        {}
-                                    d435i_infra1_frame:
-                                      d435i_infra1_optical_frame:
-                                        {}
-                                    d435i_infra2_frame:
-                                      d435i_infra2_optical_frame:
-                                        {}
-                              panda_hand_sc:
-                                {}
-                              panda_hand_tcp:
-                                object_frame:
-                                  {}
-                              panda_leftfinger:
-                                {}
-                              panda_rightfinger:
-                                {}
-          rear_bumper_link:
-            {}
-          rear_left_wheel_link:
-            {}
-          rear_right_wheel_link:
-            {}
-          top_chassis_link:
-            {}
-          top_plate_link:
-            top_plate_front_link:
-              {}
-            top_plate_rear_link:
-              {}
-          top_structure_link:
-            {}
-          user_rail_link:
-            {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -643,7 +444,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.5551671981811523
+      Distance: 1.9508016109466553
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -651,17 +452,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.7064763903617859
-        Y: -0.004924377426505089
-        Z: 0.8850537538528442
+        X: 0.6051488518714905
+        Y: 0.13329285383224487
+        Z: 0.8997923731803894
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.0303990188986063
+      Pitch: 0.22039900720119476
       Target Frame: <Fixed Frame>
-      Yaw: 1.5050151348114014
+      Yaw: 0.4800151288509369
     Saved: ~
 Window Geometry:
   Displays:
