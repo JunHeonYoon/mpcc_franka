@@ -6,26 +6,26 @@ r = 0.1
 t = np.linspace(pi/2, 2*pi+pi/2,10)
 
 # For Self  & Singularity
-# x = 2.5*r * np.sin(t)
-# y = 2.0*r * np.sin(2 * t)
-# z = 2.3*r * np.cos(t)
-
-# rot = R.from_matrix([[1, 0, 0],
-#                      [0, 1, 0],
-#                      [0, 0, 1]])
-# quat = rot.as_quat()
-# quat_list = np.tile(quat, (x.size, 1))
-
-# For Self collision & Env collision
-x = 2.2*r * np.sin(t)
-y = 2.6*r * np.sin(2 * t)
-z = 0*r * np.cos(t)
+x = 2.38*r * np.sin(t)
+y = 2.0*r * np.sin(2 * t)
+z = 2.3*r * np.cos(t)
 
 rot = R.from_matrix([[1, 0, 0],
                      [0, 1, 0],
                      [0, 0, 1]])
 quat = rot.as_quat()
 quat_list = np.tile(quat, (x.size, 1))
+
+# For Self collision & Env collision
+# x = 2.2*r * np.sin(t)
+# y = 2.6*r * np.sin(2 * t)
+# z = 0*r * np.cos(t)
+
+# rot = R.from_matrix([[1, 0, 0],
+#                      [0, 1, 0],
+#                      [0, 0, 1]])
+# quat = rot.as_quat()
+# quat_list = np.tile(quat, (x.size, 1))
 
 # For Non-constant Orientation path 
 # x = 1.0*r * np.sin(t)
