@@ -168,6 +168,9 @@ class ttmpc_controller : public controller_interface::MultiInterfaceController<
 
   bool is_reached_{false};
 
+  double virtual_s_;
+  double virtual_vs_;
+
   bool is_ttmpc_solved_{false};
   Eigen::Vector3d obs_posi_;
   double obs_radi_ = sqrt(pow(0.16/2., 2) + pow(0.195/2., 2) + pow(0.195/2., 2))*100.;
@@ -177,6 +180,7 @@ class ttmpc_controller : public controller_interface::MultiInterfaceController<
   double pred_env_min_dist_{0.};
   double mani_;
   double contour_error_{0.};
+  double heading_error_{0.};
 
   ros::Publisher ttmpc_ref_path_pub_;
   ros::Publisher ttmpc_opt_traj_pub_;

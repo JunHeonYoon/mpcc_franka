@@ -90,6 +90,8 @@ bool ttmpc_controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHand
                   ttmpc::pkg_path + std::string(jsonConfig["normalization_path"]),
                   ttmpc::pkg_path + std::string(jsonConfig["sqp_path"])};
   Ts_ttmpc_ = jsonConfig["Ts"];
+  ttmpc::Param param = ttmpc::Param(json_paths_.param_path);
+  virtual_vs_ = param.desired_s_velocity;
   ttmpc_ = std::make_unique<ttmpc::MPC>(Ts_ttmpc_, json_paths_);
   selcolNN_ = make_unique<ttmpc::SelCollNNmodel>();
   envcolNN_ = make_unique<ttmpc::EnvCollNNmodel>();
@@ -110,15 +112,15 @@ bool ttmpc_controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHand
   ttmpc_comp_time_info_file_.open(ttmpc::pkg_path + "result_data/ttmpc_comp_time_info.txt");
   obs_info_file_.open(ttmpc::pkg_path + "result_data/obs_info.txt");
 
-  joint_info_file_ << "time(0)[sec], q(1-7)[rad], qdot(8-14)[rad/s]" << std::endl;
-  ee_vel_info_file_ << "time(0)[sec], v(1-3)[m/s], w(4-6)[rad/s]" << std::endl;
-  min_dist_info_file_ << "time(0)[sec], self(1), env(2)" << std::endl;
-  mani_info_file_ << "time(0)[sec], manipulability(1)" << std::endl;
-  contour_error_info_file_ << "time(0)[sec], contouring error(1)[m]" << std::endl;
-  ttmpc_ref_path_info_file_ << "position(0-2)[m], quaternion(3-6)" << std::endl;
-  ttmpc_opt_traj_info_file_ << "time(0)[sec], N=0(1-7), ..., N=10(71-77)" << std::endl;
-  ttmpc_comp_time_info_file_ << "time(0)[sec], total(1)[sec], set_env(2)[sec], set_qp(3)[sec], solve_qp(4)[sec], get_alpha(5)[sec]" << std::endl;
-  obs_info_file_ << "time(0)[sec], radius(1)[m], position(2-4)[m]" << std::endl;
+  joint_info_file_ << "time(0)[sec], mode(1), q(2-8)[rad], qdot(9-15)[rad/s]" << std::endl;
+  ee_vel_info_file_ << "time(0)[sec], mode(1), v(2-4)[m/s], w(5-7)[rad/s]" << std::endl;
+  min_dist_info_file_ << "time(0)[sec], mode(1), self(2)[m], env(3)[m]" << std::endl;
+  mani_info_file_ << "time(0)[sec], mode(1), manipulability(2)" << std::endl;
+  contour_error_info_file_ << "time(0)[sec], mode(1), contouring error(2)[m], heading error(3)[rad]" << std::endl;
+  ttmpc_ref_path_info_file_ << "mode(0), position(1-3)[m], quaternion(4-7)" << std::endl;
+  ttmpc_opt_traj_info_file_ << "time(0)[sec], mode(1), N=0(2-8), ..., N=10(72-78)" << std::endl;
+  ttmpc_comp_time_info_file_ << "time(0)[sec], mode(1), total(2)[sec], set_env(3)[sec], set_qp(4)[sec], solve_qp(5)[sec], get_alpha(6)[sec]" << std::endl;
+  obs_info_file_ << "time(0)[sec], mode(1), radius(2)[m], position(3-5)[m]" << std::endl;
   // ======================================
   state_pub_thread_ = std::thread(&ttmpc_controller::StatePubProc, this);
   return true;
@@ -305,6 +307,10 @@ void ttmpc_controller::getCurrentState()
 
     // ============== TTMPC ==============
     mani_ = sqrt((j_*j_.transpose()).determinant());
+    if(ttmpc_thread_enabled_)
+    {
+      virtual_s_ += virtual_vs_ / hz_;
+    }
     // ==================================
   }
 }
@@ -348,6 +354,7 @@ void ttmpc_controller::asyncCalculationProc()
           std::cout << "======================== Mode cahnge: TTMPC ========================" << std::endl;
           is_reached_ = false;
           ttmpc_qdot_desired_.setZero();
+          virtual_s_ = 0;
           time_idx_ttmpc_ = 0;
 
           ttmpc::Track track = ttmpc::Track(json_paths_.track_path);
@@ -357,28 +364,28 @@ void ttmpc_controller::asyncCalculationProc()
           
 
           spline_track_ = ttmpc_->getTrack();
-          ttmpc::Traj ref_traj = spline_track_.getTrajectroy();
+          ttmpc::PathData spline_path = spline_track_.getPathData();
           nav_msgs::Path ttmpc_ref_path;
           ttmpc_ref_path.header.frame_id = "panda_link0";
-          for(size_t i=0; i<ref_traj.P.size(); i++)
+          for(size_t i=0; i<spline_path.n_points; i++)
           {
             geometry_msgs::PoseStamped path_point;
-            path_point.pose.position.x = ref_traj.P[i](0);
-            path_point.pose.position.y = ref_traj.P[i](1);
-            path_point.pose.position.z = ref_traj.P[i](2);
-            Rot2Quat(ref_traj.R[i], path_point.pose);
+            path_point.pose.position.x = spline_path.X(i);
+            path_point.pose.position.y = spline_path.Y(i);
+            path_point.pose.position.z = spline_path.Z(i);
+            Rot2Quat(spline_path.R[i], path_point.pose);
             path_point.header.frame_id = "panda_link0";
 
             ttmpc_ref_path.poses.push_back(path_point);
 
             // logging data
             ttmpc_ref_path_info_file_ << path_point.pose.position.x << " "
-                                      << path_point.pose.position.y << " "
-                                      << path_point.pose.position.z << " "
-                                      << path_point.pose.orientation.x << " "
-                                      << path_point.pose.orientation.y << " "
-                                      << path_point.pose.orientation.z << " "
-                                      << path_point.pose.orientation.w << std::endl;
+                                    << path_point.pose.position.y << " "
+                                    << path_point.pose.position.z << " "
+                                    << path_point.pose.orientation.x << " "
+                                    << path_point.pose.orientation.y << " "
+                                    << path_point.pose.orientation.z << " "
+                                    << path_point.pose.orientation.w << std::endl;
           }
           ttmpc_ref_path_pub_.publish(ttmpc_ref_path);
 
@@ -416,28 +423,28 @@ void ttmpc_controller::asyncCalculationProc()
             ttmpc_thread_enabled_ = true;
 
             spline_track_ = ttmpc_->getTrack();
-            ttmpc::Traj ref_traj = spline_track_.getTrajectroy();
+            ttmpc::PathData spline_path = spline_track_.getPathData();
             nav_msgs::Path ttmpc_ref_path;
             ttmpc_ref_path.header.frame_id = "panda_link0";
-            for(size_t i=0; i<ref_traj.P.size(); i++)
+            for(size_t i=0; i<spline_path.n_points; i++)
             {
               geometry_msgs::PoseStamped path_point;
-              path_point.pose.position.x = ref_traj.P[i](0);
-              path_point.pose.position.y = ref_traj.P[i](1);
-              path_point.pose.position.z = ref_traj.P[i](2);
-              Rot2Quat(ref_traj.R[i], path_point.pose);
+              path_point.pose.position.x = spline_path.X(i);
+              path_point.pose.position.y = spline_path.Y(i);
+              path_point.pose.position.z = spline_path.Z(i);
+              Rot2Quat(spline_path.R[i], path_point.pose);
               path_point.header.frame_id = "panda_link0";
 
               ttmpc_ref_path.poses.push_back(path_point);
 
               // logging data
               ttmpc_ref_path_info_file_ << path_point.pose.position.x << " "
-                                        << path_point.pose.position.y << " "
-                                        << path_point.pose.position.z << " "
-                                        << path_point.pose.orientation.x << " "
-                                        << path_point.pose.orientation.y << " "
-                                        << path_point.pose.orientation.z << " "
-                                        << path_point.pose.orientation.w << std::endl;
+                                      << path_point.pose.position.y << " "
+                                      << path_point.pose.position.z << " "
+                                      << path_point.pose.orientation.x << " "
+                                      << path_point.pose.orientation.y << " "
+                                      << path_point.pose.orientation.z << " "
+                                      << path_point.pose.orientation.w << std::endl;
             }
             ttmpc_ref_path_pub_.publish(ttmpc_ref_path);
           } 
@@ -484,30 +491,30 @@ void ttmpc_controller::asyncCalculationProc()
           ttmpc_thread_enabled_ = true;
 
           spline_track_ = ttmpc_->getTrack();
-          ttmpc::Traj ref_traj = spline_track_.getTrajectroy();
-            nav_msgs::Path ttmpc_ref_path;
-            ttmpc_ref_path.header.frame_id = "panda_link0";
-            for(size_t i=0; i<ref_traj.P.size(); i++)
-            {
-              geometry_msgs::PoseStamped path_point;
-              path_point.pose.position.x = ref_traj.P[i](0);
-              path_point.pose.position.y = ref_traj.P[i](1);
-              path_point.pose.position.z = ref_traj.P[i](2);
-              Rot2Quat(ref_traj.R[i], path_point.pose);
-              path_point.header.frame_id = "panda_link0";
+          ttmpc::PathData spline_path = spline_track_.getPathData();
+          nav_msgs::Path ttmpc_ref_path;
+          ttmpc_ref_path.header.frame_id = "panda_link0";
+          for(size_t i=0; i<spline_path.n_points; i++)
+          {
+            geometry_msgs::PoseStamped path_point;
+            path_point.pose.position.x = spline_path.X(i);
+            path_point.pose.position.y = spline_path.Y(i);
+            path_point.pose.position.z = spline_path.Z(i);
+            Rot2Quat(spline_path.R[i], path_point.pose);
+            path_point.header.frame_id = "panda_link0";
 
-              ttmpc_ref_path.poses.push_back(path_point);
+            ttmpc_ref_path.poses.push_back(path_point);
 
-              // logging data
-              ttmpc_ref_path_info_file_ << path_point.pose.position.x << " "
-                                        << path_point.pose.position.y << " "
-                                        << path_point.pose.position.z << " "
-                                        << path_point.pose.orientation.x << " "
-                                        << path_point.pose.orientation.y << " "
-                                        << path_point.pose.orientation.z << " "
-                                        << path_point.pose.orientation.w << std::endl;
-            }
-            ttmpc_ref_path_pub_.publish(ttmpc_ref_path);
+            // logging data
+            ttmpc_ref_path_info_file_ << path_point.pose.position.x << " "
+                                    << path_point.pose.position.y << " "
+                                    << path_point.pose.position.z << " "
+                                    << path_point.pose.orientation.x << " "
+                                    << path_point.pose.orientation.y << " "
+                                    << path_point.pose.orientation.z << " "
+                                    << path_point.pose.orientation.w << std::endl;
+          }
+          ttmpc_ref_path_pub_.publish(ttmpc_ref_path);
         }
         else if(control_mode_ == TTMPC_PLACE)
         {
@@ -545,30 +552,30 @@ void ttmpc_controller::asyncCalculationProc()
           ttmpc_thread_enabled_ = true;
 
           spline_track_ = ttmpc_->getTrack();
-          ttmpc::Traj ref_traj = spline_track_.getTrajectroy();
-            nav_msgs::Path ttmpc_ref_path;
-            ttmpc_ref_path.header.frame_id = "panda_link0";
-            for(size_t i=0; i<ref_traj.P.size(); i++)
-            {
-              geometry_msgs::PoseStamped path_point;
-              path_point.pose.position.x = ref_traj.P[i](0);
-              path_point.pose.position.y = ref_traj.P[i](1);
-              path_point.pose.position.z = ref_traj.P[i](2);
-              Rot2Quat(ref_traj.R[i], path_point.pose);
-              path_point.header.frame_id = "panda_link0";
+          ttmpc::PathData spline_path = spline_track_.getPathData();
+          nav_msgs::Path ttmpc_ref_path;
+          ttmpc_ref_path.header.frame_id = "panda_link0";
+          for(size_t i=0; i<spline_path.n_points; i++)
+          {
+            geometry_msgs::PoseStamped path_point;
+            path_point.pose.position.x = spline_path.X(i);
+            path_point.pose.position.y = spline_path.Y(i);
+            path_point.pose.position.z = spline_path.Z(i);
+            Rot2Quat(spline_path.R[i], path_point.pose);
+            path_point.header.frame_id = "panda_link0";
 
-              ttmpc_ref_path.poses.push_back(path_point);
+            ttmpc_ref_path.poses.push_back(path_point);
 
-              // logging data
-              ttmpc_ref_path_info_file_ << path_point.pose.position.x << " "
-                                        << path_point.pose.position.y << " "
-                                        << path_point.pose.position.z << " "
-                                        << path_point.pose.orientation.x << " "
-                                        << path_point.pose.orientation.y << " "
-                                        << path_point.pose.orientation.z << " "
-                                        << path_point.pose.orientation.w << std::endl;
-            }
-            ttmpc_ref_path_pub_.publish(ttmpc_ref_path);
+            // logging data
+            ttmpc_ref_path_info_file_ << path_point.pose.position.x << " "
+                                    << path_point.pose.position.y << " "
+                                    << path_point.pose.position.z << " "
+                                    << path_point.pose.orientation.x << " "
+                                    << path_point.pose.orientation.y << " "
+                                    << path_point.pose.orientation.z << " "
+                                    << path_point.pose.orientation.w << std::endl;
+          }
+          ttmpc_ref_path_pub_.publish(ttmpc_ref_path);
         }
       }
 
@@ -585,6 +592,7 @@ void ttmpc_controller::asyncCalculationProc()
         {
           is_ttmpc_solved_ = false;
           qdot_desired_ = ttmpc_qdot_desired_;
+          
         }
         if(is_reached_)
         {
@@ -750,13 +758,15 @@ void ttmpc_controller::StatePubProc()
       // get Contouring error
       if((control_mode_ == TTMPC || control_mode_ == TTMPC_PICK || control_mode_ == TTMPC_PLACE || control_mode_ == TTMPC_DROP) && ttmpc_thread_enabled_)
       {
-        // TODO
-        Eigen::Vector3d ref_posi = spline_track_.getPosition(0.);
-        contour_error_ = (ref_posi - x_).norm()*100.;
+        Eigen::Vector3d ref_posi = spline_track_.getPosition(virtual_s_);
+        Eigen::Matrix3d ref_ori = spline_track_.getOrientation(virtual_s_);
+        contour_error_ = (ref_posi - x_).norm();
+        heading_error_ = ttmpc::getInverseSkewVector(ttmpc::LogMatrix(ref_ori.transpose()*rotation_)).norm();
       }
       else
       {
         contour_error_ = 0.;
+        heading_error_ = 0.;
       }
 
       // publish speed of EE, manipulability, self minimum distance, env minimum distance, contouring error
@@ -776,12 +786,12 @@ void ttmpc_controller::StatePubProc()
       // logging data
       if((control_mode_ == TTMPC || control_mode_ == TTMPC_PICK || control_mode_ == TTMPC_PLACE || control_mode_ == TTMPC_DROP) && ttmpc_thread_enabled_)
       {
-        joint_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << q_.transpose() << " " << qdot_.transpose() << std::endl;
-        ee_vel_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << x_dot_.transpose() << std::endl;
-        min_dist_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << pred_sel_min_dist_ << " " << pred_env_min_dist_ << std::endl;
-        mani_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << mani_ << std::endl;
-        contour_error_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << contour_error_ << std::endl;
-        obs_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << obs_radi_ << " " << obs_posi_.transpose() << std::endl;
+        joint_info_file_         << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << q_.transpose() << " " << qdot_.transpose() << std::endl;
+        ee_vel_info_file_        << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << x_dot_.transpose() << std::endl;
+        min_dist_info_file_      << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << pred_sel_min_dist_ << " " << pred_env_min_dist_ << std::endl;
+        mani_info_file_          << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << mani_ << std::endl;
+        contour_error_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << contour_error_     << " " << heading_error_        << std::endl;
+        obs_info_file_           << (ros::Time::now()-control_start_time_).toSec() << " " << control_mode_ << " " << obs_radi_ << " " << obs_posi_.transpose() << std::endl;
       }
     }
   }
@@ -814,6 +824,12 @@ void ttmpc_controller::asyncTTMPCProc()
       else
       {
         obs_posi_ << 5., 5., 5.;
+      }
+      double tmp_s = virtual_s_;
+      ttmpc_->updateS(x0, tmp_s);
+      {
+        std::lock_guard<std::mutex> lock(ttmpc_output_mutex_);
+        virtual_s_ = tmp_s;
       }
 
       if(ttmpc_->checkIsEnd(x0, time_idx_ttmpc_))
@@ -864,13 +880,14 @@ void ttmpc_controller::asyncTTMPCProc()
 
             // logging data
             ttmpc_opt_traj_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " "
-                                    << pose.pose.position.x << " "
-                                    << pose.pose.position.y << " "
-                                    << pose.pose.position.z << " "
-                                    << pose.pose.orientation.x << " "
-                                    << pose.pose.orientation.y << " "
-                                    << pose.pose.orientation.z << " "
-                                    << pose.pose.orientation.w;
+                                      << control_mode_ << " "
+                                      << pose.pose.position.x << " "
+                                      << pose.pose.position.y << " "
+                                      << pose.pose.position.z << " "
+                                      << pose.pose.orientation.x << " "
+                                      << pose.pose.orientation.y << " "
+                                      << pose.pose.orientation.z << " "
+                                      << pose.pose.orientation.w;
           }
           ttmpc_opt_traj_pub_.publish(ttmpc_opt_traj);
           ttmpc_opt_traj_info_file_ << "\n";
@@ -890,11 +907,12 @@ void ttmpc_controller::asyncTTMPCProc()
 
           // logging data
           ttmpc_comp_time_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " "
-                                    << mpc_sol.compute_time.total << " "
-                                    << mpc_sol.compute_time.set_env << " "
-                                    << mpc_sol.compute_time.set_qp << " "
-                                    << mpc_sol.compute_time.solve_qp << " "
-                                    << mpc_sol.compute_time.get_alpha << std::endl;
+                                     << control_mode_ << " "
+                                     << mpc_sol.compute_time.total << " "
+                                     << mpc_sol.compute_time.set_env << " "
+                                     << mpc_sol.compute_time.set_qp << " "
+                                     << mpc_sol.compute_time.solve_qp << " "
+                                     << mpc_sol.compute_time.get_alpha << std::endl;
 
           time_idx_ttmpc_++;
         }
