@@ -1,10 +1,10 @@
 {
   "qE" : 500.0,
-  "qENmult": 10,
+  "qENmult": 1,
 
   "qOri": 100,
 
-  "qSing": 1.0,
+  "qSing": 0,
 
   "rdq"  : 0.002,
   "rddq"  : 10,
