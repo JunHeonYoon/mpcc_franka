@@ -1,12 +1,12 @@
 {
   "qC" : 500.0,
-  "qCNmult": 10,
+  "qCNmult": 1,
   "qL" : 100.0,
   "qVs" : 2.0,
 
   "qOri": 100,
 
-  "qSing": 0.2,
+  "qSing": 0,
 
   "rdq"  : 0.002,
   "rddq"  : 10,
