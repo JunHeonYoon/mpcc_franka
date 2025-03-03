@@ -71,11 +71,12 @@ struct FilterData
 struct ComputeTime
 {
     double set_env;
+    double set_self;
     double set_qp;
     double solve_qp;
     double get_alpha;
     double total;
-    void setZero(){set_env=0; set_qp=0; solve_qp=0;get_alpha=0;}
+    void setZero(){set_env=0; set_self=0; set_qp=0; solve_qp=0;get_alpha=0;}
 };
 
 class OsqpInterface : public SolverInterface {
@@ -84,8 +85,8 @@ public:
     OsqpInterface(double Ts,const PathToJson &path,const ParamValue &param_value);
     void setTrack(const ArcLengthSpline track);
     void setParam(const ParamValue &param_value);
-    // void setEnvData(const std::vector<float> &voxel);
     void setEnvData(const Eigen::Vector3d &obs_position, const double &obs_radius);
+    void setSelfData();
     void setCurrentInput(const Input &cutrent_input);
     void setInitialGuess(const std::vector<OptVariables> &initial_guess);
     bool solveOCP(std::vector<OptVariables> &opt_sol, Status *status, ComputeTime *mpc_time);

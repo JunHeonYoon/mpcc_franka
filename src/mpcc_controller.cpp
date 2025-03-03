@@ -65,8 +65,8 @@ bool mpcc_controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandl
   mode_change_thread_ = std::thread(&mpcc_controller::modeChangeReaderProc, this);
   control_mode_pub_ = node_handle.advertise<std_msgs::Float64>("/franka/control_mode", 1);
 
-  gripper_ac_homing_.waitForServer();  
-  gripper_ac_homing_.sendGoal(franka_gripper::HomingGoal());
+  // gripper_ac_homing_.waitForServer();  
+  // gripper_ac_homing_.sendGoal(franka_gripper::HomingGoal());
   // ================ MPCC ================
   mpcc_ref_path_pub_ = node_handle.advertise<nav_msgs::Path>("/mpcc/ref_path", 1);
   mpcc_opt_traj_pub_ = node_handle.advertise<nav_msgs::Path>("/mpcc/opt_traj", 1);
@@ -120,7 +120,7 @@ bool mpcc_controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandl
   contour_error_info_file_ << "time(0)[sec], mode(1), contouring error(2)[m], heading error(3)[rad]" << std::endl;
   mpcc_ref_path_info_file_ << "mode(0), position(1-3)[m], quaternion(4-7)" << std::endl;
   mpcc_opt_traj_info_file_ << "time(0)[sec], mode(1), N=0(2-8), ..., N=10(72-78)" << std::endl;
-  mpcc_comp_time_info_file_ << "time(0)[sec], mode(1), total(2)[sec], set_env(3)[sec], set_qp(4)[sec], solve_qp(5)[sec], get_alpha(6)[sec]" << std::endl;
+  mpcc_comp_time_info_file_ << "time(0)[sec], mode(1), total(2)[sec], set_self(3)[sec], set_env(4)[sec], set_qp(5)[sec], solve_qp(6)[sec], get_alpha(7)[sec]" << std::endl;
   obs_info_file_ << "time(0)[sec], mode(1), radius(2)[m], position(3-5)[m]" << std::endl;
   // ======================================
   state_pub_thread_ = std::thread(&mpcc_controller::StatePubProc, this);
@@ -942,6 +942,7 @@ void mpcc_controller::asyncMPCCProc()
         mpcc_comp_time_info_file_ << (ros::Time::now()-control_start_time_).toSec() << " "
                                   << control_mode_ << " "
                                   << mpc_sol.compute_time.total << " "
+                                  << mpc_sol.compute_time.set_self << " "
                                   << mpc_sol.compute_time.set_env << " "
                                   << mpc_sol.compute_time.set_qp << " "
                                   << mpc_sol.compute_time.solve_qp << " "

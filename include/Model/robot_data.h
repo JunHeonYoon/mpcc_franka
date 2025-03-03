@@ -52,7 +52,8 @@ struct RobotData
         is_env_data_valid = false;
     }
 
-    void update(Eigen::Matrix<double,PANDA_DOF,1> q_input, const std::unique_ptr<RobotModel> &robot_model, const std::unique_ptr<SelCollNNmodel> &selcol_model)
+    // void update(Eigen::Matrix<double,PANDA_DOF,1> q_input, const std::unique_ptr<RobotModel> &robot_model, const std::unique_ptr<SelCollNNmodel> &selcol_model)
+    void update(Eigen::Matrix<double,PANDA_DOF,1> q_input, const std::unique_ptr<RobotModel> &robot_model)
     {
         q_ = q_input;
         EE_position_ = robot_model->getEEPosition(q_);
@@ -63,6 +64,15 @@ struct RobotData
         manipul_ = robot_model->getManipulability(q_);
         d_manipul_ = robot_model->getDManipulability(q_);
 
+        // auto pred = selcol_model->calculateMlpOutput(q_, false);
+        // sel_min_dist_ = pred.first.value();
+        // d_sel_min_dist_ = pred.second.transpose();
+
+        is_data_valid = true;
+    }
+
+    void updateSelf(const std::unique_ptr<SelCollNNmodel> &selcol_model)
+    {
         auto pred = selcol_model->calculateMlpOutput(q_, false);
         sel_min_dist_ = pred.first.value();
         d_sel_min_dist_ = pred.second.transpose();

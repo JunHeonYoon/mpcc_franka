@@ -143,6 +143,9 @@ bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vect
 
     solver_interface_->setCurrentInput(u0);
     solver_interface_->setInitialGuess(initial_guess_);
+    auto start_self = std::chrono::high_resolution_clock::now();
+    solver_interface_->setSelfData();
+    auto end_self = std::chrono::high_resolution_clock::now();
     auto start_env = std::chrono::high_resolution_clock::now();
     solver_interface_->setEnvData(obs_position, obs_radius);
     auto end_env = std::chrono::high_resolution_clock::now();
@@ -199,6 +202,7 @@ bool MPC::runMPC_(MPCReturn &mpc_return, State &x0, Input &u0, const Eigen::Vect
     mpc_return = {initial_guess_[0].uk,initial_guess_,time_nmpc};
     auto end_mpc = std::chrono::high_resolution_clock::now();
     mpc_return.compute_time.total = std::chrono::duration_cast<std::chrono::duration<double>>(end_mpc - start_mpc).count();
+    mpc_return.compute_time.set_self = std::chrono::duration_cast<std::chrono::duration<double>>(end_self - start_self).count();
     mpc_return.compute_time.set_env = std::chrono::duration_cast<std::chrono::duration<double>>(end_env - start_env).count();
     if(sqp_status == SOLVED || (sqp_status == MAX_ITER_EXCEEDED && num_valid_guess_failed_ < 5)) return true;
     else return false;

@@ -47,6 +47,7 @@ class SolverInterface {
         virtual void setParam(const ParamValue &param_value) = 0;
         // virtual void setEnvData(const std::vector<float> &voxel) = 0;
         virtual void setEnvData(const Eigen::Vector3d &obs_position, const double &obs_radius) = 0;
+        virtual void setSelfData() = 0;
         virtual void setInitialGuess(const std::vector<OptVariables> &initial_guess) = 0;
         virtual void setCurrentInput(const Input &cutrent_input) = 0;
         virtual bool solveOCP(std::vector<OptVariables> &opt_sol, Status *status, ComputeTime *mpc_time) = 0;

@@ -112,12 +112,26 @@ void OsqpInterface::setInitialGuess(const std::vector<OptVariables> &initial_gue
     for(size_t i=0; i<rb_.size(); i++) rb_[i].setZero();
     initial_guess_ = initial_guess;
     initial_guess_vec_.setZero(N_var);
+    
     for(size_t i=0;i<=N; i++)
     {
         initial_guess_vec_.segment(NX*i, NX) = stateToVector(initial_guess[i].xk);
         if(i != N) initial_guess_vec_.segment(NX*(N+1) + NU*i, NU) = inputToVector(initial_guess[i].uk);
 
-        rb_[i].update(stateToJointVector(initial_guess[i].xk), robot_, selcolNN_);
+        // rb_[i].update(stateToJointVector(initial_guess[i].xk), robot_, selcolNN_);
+        rb_[i].update(stateToJointVector(initial_guess[i].xk), robot_);
+        // auto start_self = std::chrono::high_resolution_clock::now();
+        // rb_[i].updateSelf(selcolNN_);
+        // auto end_self = std::chrono::high_resolution_clock::now();
+
+    }
+}
+
+void OsqpInterface::setSelfData()
+{
+    for(size_t i=0; i<=N; i++)
+    {
+        rb_[i].updateSelf(selcolNN_);
     }
 }
 
